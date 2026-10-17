@@ -19,14 +19,14 @@
   const stateBadge = s => `<span class="pill ${s.tone}">${esc(s.label)}</span>${s.issue==='open'?'<span class="pill red">未解問題</span>':''}`;
   const entity = id => data?.entities?.find(e => e.id === id);
   const matched = e => !$('#search').value || `${e.title} ${e.plain_summary.purpose} ${e.responsibility.role_type}`.toLowerCase().includes($('#search').value.toLowerCase());
-  const scopeLabel = e => ({action:'MVP 行動型',history:'歷史調查型',shared:'雙 Agent 共用',unknown:'共用 / 待確認範圍'}[e.agent_scope]);
+  const scopeLabel = e => ({action:'MVP 行動型',history:'歷史調查型',shared:'雙 Agent 共用',unknown:'適用範圍待確認'}[e.agent_scope]);
   const openGroups = new Set();
   function mobileNeighbors(id, relations){
     const incoming=new Set(),outgoing=new Set();
     for(const r of relations||[]){if(r.target===id&&r.source!==id)incoming.add(r.source);if(r.source===id&&r.target!==id)outgoing.add(r.target);}
     return {incoming:[...incoming],outgoing:[...outgoing]};
   }
-  function mobileGroups(groups){return `<div class="group-actions"><button data-groups="open">全部展開</button><button data-groups="close">全部收合</button></div>`+groups.map(g=>{const achieved=g.members.filter(id=>entity(id)?.state.core_outcome==='achieved').length;return `<details class="mobile-group" data-group-id="${esc(g.id)}" ${query()||openGroups.has(g.id)?'open':''}><summary><span><b>${esc(g.title)}</b><small>${esc(g.summary||'依來源整理的知識分群')}</small></span><span class="group-count"><i class="dot ${achieved?'green':'amber'}"></i>${g.members.length} 項</span></summary><p class="scope">${achieved} 項核心成果 · 分群非執行順序</p>${g.members.map(id=>{const e=entity(id);return `<button class="list-item" data-node="${esc(id)}"><b>${esc(e.title)}</b>${stateBadge(e.state)}<small>${esc(scopeLabel(e))} · ${esc(e.responsibility.role_type)}</small></button>`;}).join('')}</details>`;}).join('');}
+  function mobileGroups(groups){return `<div class="group-actions"><button data-groups="open">全部展開</button><button data-groups="close">全部收合</button></div>`+groups.map(g=>{const achieved=g.members.filter(id=>entity(id)?.state.core_outcome==='achieved').length;return `<details class="mobile-group" data-group-id="${esc(g.id)}" ${query()||openGroups.has(g.id)?'open':''}><summary><span><b>${esc(g.title)}</b><small>${esc(g.summary||'依來源整理的知識分群')}</small></span><span class="group-count"><i class="dot ${achieved?'green':'amber'}"></i>${g.members.length} 項</span></summary><p class="scope">${achieved} 項核心成果 · 依功能分類</p>${g.members.map(id=>{const e=entity(id);return `<button class="list-item" data-node="${esc(id)}"><b>${esc(e.title)}</b>${stateBadge(e.state)}<small>${esc(scopeLabel(e))} · ${esc(e.responsibility.role_type)}</small></button>`;}).join('')}</details>`;}).join('');}
   // Pure layout: stable ordering, bounded group columns, dynamic member heights.
   // Navigation grouping is not execution order. All dependency edges come from DTO.
   function layout(groups, full) {
@@ -91,7 +91,7 @@
     document.querySelectorAll('[data-node]').forEach(el=>{el.classList.toggle('selected',el.dataset.node===target||el.dataset.node===selected);el.classList.toggle('dim',!!selected&&!related.has(el.dataset.node)&&!listMode);});
     document.querySelectorAll('[data-edge]').forEach(el=>{el.classList.toggle('selected',el.dataset.edge===selected);el.classList.toggle('dim',!!selected&&!relatedEdges.has(el.dataset.edge));});
   }
-  const step=(n,title,body,open=false)=>`<details ${open?'open':''}><summary>Step ${n} · ${title}</summary>${body}</details>`;
+  const step=(n,title,body,open=false)=>`<details ${open?'open':''}><summary>${n}. ${title}</summary>${body}</details>`;
   const pair=(k,v)=>`<dt>${esc(k)}</dt><dd>${esc(txt(v))}</dd>`;
   function evidence(records){const unique=[...new Map(records.map(e=>[e.event_id,e])).values()];return unique.map(e=>`<article class="event"><small>${esc(e.display_date||e.occurred_at||'日期未知')} · ${esc(e.evidence_type)}</small><h3>${esc(e.title)}</h3><p>${esc(e.summary)}</p><code>${esc(e.event_id)}</code><p>對話來源：${esc(e.source_status)}${e.gaps.length?' · '+esc(e.gaps.join('；')):''}</p>${e.conversation_id?`<a href="https://chatgpt.com/c/${encodeURIComponent(e.conversation_id)}" target="_blank" rel="noopener noreferrer">開啟來源對話 ↗</a>`:''}</article>`).join('')||'<p>尚無直接來源紀錄；不以畫面關係當成驗證。</p>';}
   function highlightLogicChips(jumpId=null, stepId=null, srcIdx=null){
@@ -117,7 +117,7 @@
     const sections=[...content.querySelectorAll(':scope > details')];
     sections.forEach((s,i)=>s.dataset.sheetSection=i);
     head.insertAdjacentHTML('afterend',`<nav class="sheet-jumps" aria-label="詳情章節">${['白話','運作','狀態','技術','證據'].map((s,i)=>`<button data-sheet-jump="${i}">${s}</button>`).join('')}</nav>`);
-    if(id){const ns=mobileNeighbors(id,data.relationships);content.insertAdjacentHTML('afterbegin',`<section class="one-hop" aria-label="一階鄰接探索"><b>${esc(entity(id)?.title)}</b>${[['incoming','⬅ 上游輸入來源'],['outgoing','➡ 下游呼叫／輸出']].map(([dir,label])=>`<div><h3>${label}</h3>${ns[dir].filter(x=>entity(x)).map(x=>`<button class="logic-chip" data-jump="${esc(x)}">${esc(entity(x).title)}</button>`).join('')||'<p>來源未記載關係</p>'}</div>`).join('')}<small>來源關係，非即時呼叫紀錄</small></section>`);}
+    if(id){const ns=mobileNeighbors(id,data.relationships);content.insertAdjacentHTML('afterbegin',`<section class="one-hop" aria-label="相關功能"><b>${esc(entity(id)?.title)}</b>${[['incoming','⬅ 上游輸入來源'],['outgoing','➡ 下游呼叫／輸出']].map(([dir,label])=>`<div><h3>${label}</h3>${ns[dir].filter(x=>entity(x)).map(x=>`<button class="logic-chip" data-jump="${esc(x)}">${esc(entity(x).title)}</button>`).join('')||'<p>尚無關係紀錄</p>'}</div>`).join('')}<small>這是紀錄中的關係</small></section>`);}
     const handle=d.querySelector('.sheet-grab');let start=null,swipe=false;
     handle.addEventListener('pointerdown',e=>{swipe=false;start=e.clientY;handle.setPointerCapture(e.pointerId);});
     handle.addEventListener('pointerup',e=>{if(start!==null){const delta=e.clientY-start;swipe=Math.abs(delta)>40;if(delta>70)close();else if(delta < -40)d.classList.add('sheet-full');}start=null;syncSheetSize();});
@@ -139,19 +139,19 @@
     selected=id;const e=entity(id),g=data?.groups?.find(g=>'group:'+g.id===id),edge=edges.find(e=>e.id===id)||data?.relationships?.find(e=>e.id===id);let title,body;
     if(e){title=e.title;const h=e.evidence_and_history,s=e.state;
       body=`<div class="scope">${esc(scopeLabel(e))} · ${esc(e.scope_basis)}</div>${stateBadge(s)}`+
-        step(1,'白話理解',`<p>${esc(e.plain_summary.purpose)}</p><p>邊界：${esc(e.plain_summary.limits)}</p>`,true)+
-        step(2,'角色與運作',`<dl>${Object.entries(e.responsibility).map(([k,v])=>pair(({role_type:'角色',input:'輸入',process:'處理',output:'輸出'})[k],v)).join('')}</dl>${e.relationships.map(r=>`<button class="jump" data-jump="${esc(r.entity_id)}">${r.direction==='incoming'?'← 來自':'→ 前往'} ${esc(entity(r.entity_id)?.title||r.entity_id)}</button>`).join('')||'<p>尚無明確模組關係紀錄。</p>'}`)+
-        step(3,'狀態與驗收缺口',`<dl>${[['實作',s.implementation],['核心成果',s.label],['驗證',s.validation],['尚缺驗收',s.remaining_validation],['問題',s.issue],['批准',s.approval],['證據分類',s.evidence_type]].map(([k,v])=>pair(k,v)).join('')}</dl>`)+
-        step(4,'技術細節與限制',`<dl>${Object.entries(e.technical_details).map(([k,v])=>pair(k,v)).join('')}</dl>`)+
-        step(5,'原始對話證據',evidence(h.events)+`<h3>知識修訂</h3>${h.versions.map(v=>`<p>#${v.sequence} · 收錄 ${esc(v.recorded_at)}<br>${esc(v.change_reason)}</p>`).join('')||(e.id.startsWith('projection:')?'<p>唯讀來源投影；未新增或改寫正式知識版本。</p>':'<p>此節點來自架構快照。</p>')}`);
-    }else if(g){title=g.title;body=step(1,'白話理解',`<p>${esc(g.summary)}</p><p>${esc(g.basis)}；不將分群標記為整體完成。</p>`,true)+step(2,'探索模組',g.members.filter(id=>matched(entity(id))).map(id=>{const e=entity(id);return `<button class="jump" data-jump="${esc(id)}">${esc(e.title)} ${stateBadge(e.state)}</button>`;}).join(''),true)+step(3,'狀態與驗收缺口','<p>各模組分別保留核心成果、驗收與問題。請選取模組查看。</p>')+step(4,'技術細節與限制','<p>這是知識導覽分類，不代表實際部署服務或執行順序。</p>')+step(5,'原始對話證據','<p>來源依各模組分別保存，請點擊模組追溯。</p>');
-    }else if(edge){title='模組之間的關係';const raw=edge.members?data.relationships.filter(e=>edge.members.includes(e.id)):[edge];body=step(1,'白話理解',`<p>${esc(edge.label)}</p><p>${edge.confidence==='documented'?'有來源描述；不是獨立程式驗證。':'推論／規劃或來源不足，尚未確認。'}</p>`,true)+step(2,'方向與相連模組',raw.map(e=>`<button class="jump" data-jump="${esc(e.source)}">來源：${esc(entity(e.source)?.title)}</button><button class="jump" data-jump="${esc(e.target)}">目標：${esc(entity(e.target)?.title)}</button><p>${esc(e.label)}</p>`).join(''),true)+step(3,'狀態與驗收缺口','<p>關係存在於文件不表示執行路徑已驗收。</p>')+step(4,'技術細節與限制',`<p>${esc(raw.map(e=>e.type).join('、'))}</p>`)+step(5,'原始對話證據',evidence(raw.flatMap(e=>e.events)));}
+        step(1,'用途',`<p>${esc(e.plain_summary.purpose)}</p><p>邊界：${esc(e.plain_summary.limits)}</p>`,true)+
+        step(2,'如何運作',`<dl>${Object.entries(e.responsibility).map(([k,v])=>pair(({role_type:'角色',input:'輸入',process:'處理',output:'輸出'})[k],v)).join('')}</dl>${e.relationships.map(r=>`<button class="jump" data-jump="${esc(r.entity_id)}">${r.direction==='incoming'?'← 來自':'→ 前往'} ${esc(entity(r.entity_id)?.title||r.entity_id)}</button>`).join('')||'<p>尚無明確模組關係紀錄。</p>'}`)+
+        step(3,'完成情況',`<dl>${[['實作',s.implementation],['核心成果',s.label],['驗證',s.validation],['尚缺驗收',s.remaining_validation],['問題',s.issue],['批准',s.approval],['證據分類',s.evidence_type]].map(([k,v])=>pair(k,v)).join('')}</dl>`)+
+        step(4,'技術資訊',`<dl>${Object.entries(e.technical_details).map(([k,v])=>pair(k,v)).join('')}</dl>`)+
+        step(5,'參考紀錄',evidence(h.events)+`<h3>修改紀錄</h3>${h.versions.map(v=>`<p>#${v.sequence} · 收錄 ${esc(v.recorded_at)}<br>${esc(v.change_reason)}</p>`).join('')||(e.id.startsWith('projection:')?'<p>這是從既有資料整理的內容。</p>':'<p>來自架構紀錄。</p>')}`);
+    }else if(g){title=g.title;body=step(1,'用途',`<p>${esc(g.summary)}</p><p>${esc(g.basis)}；不將分群標記為整體完成。</p>`,true)+step(2,'探索模組',g.members.filter(id=>matched(entity(id))).map(id=>{const e=entity(id);return `<button class="jump" data-jump="${esc(id)}">${esc(e.title)} ${stateBadge(e.state)}</button>`;}).join(''),true)+step(3,'完成情況','<p>各模組分別保留核心成果、驗收與問題。請選取模組查看。</p>')+step(4,'技術資訊','<p>這是功能分類，不是執行流程。</p>')+step(5,'參考紀錄','<p>來源依各模組分別保存，請點擊模組追溯。</p>');
+    }else if(edge){title='模組之間的關係';const raw=edge.members?data.relationships.filter(e=>edge.members.includes(e.id)):[edge];body=step(1,'用途',`<p>${esc(edge.label)}</p><p>${edge.confidence==='documented'?'有來源描述；不是獨立程式驗證。':'推論／規劃或來源不足，尚未確認。'}</p>`,true)+step(2,'方向與相連模組',raw.map(e=>`<button class="jump" data-jump="${esc(e.source)}">來源：${esc(entity(e.source)?.title)}</button><button class="jump" data-jump="${esc(e.target)}">目標：${esc(entity(e.target)?.title)}</button><p>${esc(e.label)}</p>`).join(''),true)+step(3,'完成情況','<p>關係存在於文件不表示執行路徑已驗收。</p>')+step(4,'技術資訊',`<p>${esc(raw.map(e=>e.type).join('、'))}</p>`)+step(5,'參考紀錄',evidence(raw.flatMap(e=>e.events)));}
     else return;
-    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close" aria-label="關閉詳情">✕ 關閉抽屜</button><div class="eyebrow">KNOWLEDGE EXPLORER${autoSync?' · 步驟自動連動':''}</div><h2>${esc(title)}</h2></div>${body}`;
+    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close" aria-label="關閉詳情">✕ 關閉</button><div class="eyebrow">功能說明${autoSync?' · 步驟自動連動':''}</div><h2>${esc(title)}</h2></div>${body}`;
     $('#drawer').classList.add('open');$('#drawer').classList.toggle('auto-synced',Boolean(autoSync));$('#drawer').scrollTop=0;highlight();highlightLogicChips(id);highlightEvolutionChips(id,null);if(focus)$('#close').focus();
     enhanceMobileDrawer(e?.id);syncSheet();
   }
-  function close(){selected=null;$('#drawer').classList.remove('open','auto-synced','sheet-full');$('#drawer').innerHTML='<div class="drawer-empty"><span>↗</span><h2>選取下一個模組</h2><p>沿著關係探索它的角色與來源。</p></div>';syncSheet();highlight();highlightLogicChips();highlightEvolutionChips();if(origin?.isConnected)origin.focus({preventScroll:true});}
+  function close(){selected=null;$('#drawer').classList.remove('open','auto-synced','sheet-full');$('#drawer').innerHTML='<div class="drawer-empty"><span>↗</span><h2>選擇功能</h2><p>查看用途與相關紀錄。</p></div>';syncSheet();highlight();highlightLogicChips();highlightEvolutionChips();if(origin?.isConnected)origin.focus({preventScroll:true});}
   let knowledgeSnapshotPromise;
   async function workspaceKnowledge(){
     if(window.__V2_STATIC_BUNDLE__)return {views:Object.fromEntries(Object.entries(window.__V2_STATIC_BUNDLE__.views).map(([scope,v])=>[scope,v.latest]))};
@@ -166,9 +166,9 @@
     return knowledgeSnapshotPromise;
   }
   window.ProjectKnowledgeSnapshot=workspaceKnowledge;
-  async function load(){const token=++request;$('#notice').textContent='正在讀取唯讀知識…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf&&window.__V2_STATIC_BUNDLE__.paths?.[currentAgent]?.[currentAsOf]){const response=await fetch(new URL(window.__V2_STATIC_BUNDLE__.paths[currentAgent][currentAsOf],document.baseURI));if(!response.ok)throw Error('歷史時間切面下載失敗');saved=await response.json();window.__V2_STATIC_BUNDLE__.views[currentAgent][currentAsOf]=saved;}if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'工作與學習紀錄 · 來源覆蓋：部分 · 核心成果不等於全面驗收';const m=d.provenance_manifest||{};$('#manifest').textContent=`快照 ${m.snapshot_captured_at||'尚未取得'} · ${m.event_count??0} 筆來源事件 · ${(m.knowledge_version_ids||[]).length} 個知識版本`;renderGraph();renderLogic();renderEvolution();renderProgress();if(!window.__V2_STATIC_BUNDLE__)refreshClosure().catch(()=>{});}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
+  async function load(){const token=++request;$('#notice').textContent='載入中…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf&&window.__V2_STATIC_BUNDLE__.paths?.[currentAgent]?.[currentAsOf]){const response=await fetch(new URL(window.__V2_STATIC_BUNDLE__.paths[currentAgent][currentAsOf],document.baseURI));if(!response.ok)throw Error('歷史時間切面下載失敗');saved=await response.json();window.__V2_STATIC_BUNDLE__.views[currentAgent][currentAsOf]=saved;}if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'資料來自開發紀錄';const m=d.provenance_manifest||{};$('#manifest').textContent=`資料更新：${m.snapshot_captured_at||'尚未取得'}`;renderGraph();renderLogic();renderEvolution();renderProgress();if(!window.__V2_STATIC_BUNDLE__)refreshClosure().catch(()=>{});}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
   // ---- Agent Logic: manual Design Walkthrough (never a runtime trace; no timers, durations or autoplay). ----
-  const DEFAULT_SYNTHETIC_NOTICE='目前沒有教學示例；不以合成內容混充真實證據';
+  const DEFAULT_SYNTHETIC_NOTICE='目前沒有教學範例。';
   const logicData=()=>data?.agent_logic||{workflows:[],cases:[],synthetic_examples:[],query_abilities:[],synthetic_notice:DEFAULT_SYNTHETIC_NOTICE};
   const logicRoles={python_rule:'Python 確定性規則',llm_reasoning:'DaVinci 語意判斷',tool_query:'Tool 查詢',db_snapshot:'DB / Snapshot',ui_interaction:'UI 操作',human:'人員',unknown:'角色未記載'};
   const groupTitle=id=>data?.groups?.find(g=>g.id===id)?.title||'';
@@ -184,9 +184,9 @@
   // Split raw text on the query and escape each piece, so highlighting never breaks HTML entities.
   const hl=v=>{const s=String(v??''),q=query();if(!q)return esc(s);const lower=s.toLowerCase();let out='',i=0,j;while((j=lower.indexOf(q,i))!==-1){out+=esc(s.slice(i,j))+'<mark>'+esc(s.slice(j,j+q.length))+'</mark>';i=j+q.length;}return out+esc(s.slice(i));};
   const currentMaterial=()=>logicMaterials().find(m=>m.id===logicId);
-  const valueBlock=(title,values,cls='')=>`<section class="io-block ${cls}"><h4>${esc(title)}</h4>${values?.filter(Boolean).length?values.filter(Boolean).map(v=>`<p>${hl(v)}</p>`).join(''):'<p class="logic-unknown">來源未記載（Unknown）</p>'}</section>`;
-  const confidencePill=s=>s?.step_confidence==='documented'?'<span class="pill green">有明確來源 documented</span>':'<span class="pill amber">部分記載 partial</span>';
-  const linkLabel=s=>s?.next_step_status==='connected'?'有來源順序':s?.next_step_status==='data_cutoff'?'⚠ 後續未取得資料':'⚠ 順序／分支條件未知';
+  const valueBlock=(title,values,cls='')=>`<section class="io-block ${cls}"><h4>${esc(title)}</h4>${values?.filter(Boolean).length?values.filter(Boolean).map(v=>`<p>${hl(v)}</p>`).join(''):'<p class="logic-unknown">尚無紀錄</p>'}</section>`;
+  const confidencePill=s=>s?.step_confidence==='documented'?'<span class="pill green">有來源紀錄</span>':'<span class="pill amber">來源不完整</span>';
+  const linkLabel=s=>s?.next_step_status==='connected'?'有來源順序':s?.next_step_status==='data_cutoff'?'⚠ 後續未取得資料':'下一步待確認';
   function logicIoSection(s){
     const io=s?.io_spec||{};
     const src=k=>io.field_sources?.[k]?.length?` · 欄位 ${io.field_sources[k].join('、')}`:'';
@@ -198,36 +198,36 @@
       ['副作用／邊界',(io.side_effects||[]).filter(Boolean)]
     ].filter(([,vals])=>vals.length>0);
     if(!cols.length){
-      return `<div class="logic-io-compact io-basis" role="note">ℹ️ I/O 與邊界規格：來源對話未明確記載結構化輸入/輸出欄位（狀態：${esc(io.status||'unknown')} · ${esc(io.mapping_basis||'未記載')}）</div>`;
+      return `<div class="logic-io-compact io-basis" role="note">ℹ️ 輸入和輸出尚無完整紀錄。</div>`;
     }
-    return `<div class="logic-io has-content" style="grid-template-columns:repeat(${Math.min(cols.length,3)},minmax(0,1fr))" aria-label="輸入、處理與條件、輸出">${cols.map(([t,vals])=>`<section class="io-block"><h4>${esc(t)}</h4>${vals.map(v=>`<p>${hl(v)}</p>`).join('')}</section>`).join('')}</div><p class="io-basis">ℹ️ I/O 狀態：${esc(io.status||'partial')} · ${esc(io.mapping_basis||'')}（僅展開有白名單記載之欄位）</p>`;
+    return `<div class="logic-io has-content" style="grid-template-columns:repeat(${Math.min(cols.length,3)},minmax(0,1fr))" aria-label="輸入、處理與條件、輸出">${cols.map(([t,vals])=>`<section class="io-block"><h4>${esc(t)}</h4>${vals.map(v=>`<p>${hl(v)}</p>`).join('')}</section>`).join('')}</div><p class="io-basis">ℹ️ 資料完整度：${esc(io.status||'partial')} · ${esc(io.mapping_basis||'')}</p>`;
   }
   function logicCard(s){
     const relIds=s?.related_entity_ids||[];
     const chips=relIds.map(id=>`<button class="logic-chip" data-jump="${esc(id)}">↗ ${esc(entity(id)?.title||id)}</button>`).join('');
-    const mentions=(s?.actor_mentions||[]).map(m=>`<span class="pill gray" title="${esc(m.note)}">內文提及: ${esc(logicRoles[m.role]||m.role)}（${esc((m.tokens||[]).join('、'))}）</span>`).join('');
+    const mentions=(s?.actor_mentions||[]).map(m=>`<span class="pill gray" title="${esc(m.note)}">提到： ${esc(logicRoles[m.role]||m.role)}（${esc((m.tokens||[]).join('、'))}）</span>`).join('');
     const notes=(s?.scope_notes||[]).map(n=>`<p><b>${esc(n.field)}</b>：${hl(n.text)}</p>`).join('');
     const roleUnknown=!s?.actor_role||s.actor_role==='unknown';
-    const rolePill=`<span class="pill role ${roleUnknown?'gray':'blue'}" title="${roleUnknown?'來源未明確記載此步驟由誰執行':s.actor_role_basis==='source_backed_design_projection'?'依對話正文重建的設計角色，非程式執行驗證':'來源 metadata 明確記載'}">${roleUnknown?'角色未記載':'執行角色：'+esc(logicRoles[s.actor_role]||s.actor_role)}</span>`;
+    const rolePill=`<span class="pill role ${roleUnknown?'gray':'blue'}" title="${roleUnknown?'來源未明確記載此步驟由誰執行':s.actor_role_basis==='source_backed_design_projection'?'依對話正文重建的設計角色，非程式執行驗證':'來源已有紀錄'}">${roleUnknown?'角色未記載':'負責：'+esc(logicRoles[s.actor_role]||s.actor_role)}</span>`;
     const evRefs=s?.evidence_refs||[];
     const gaps=s?.gaps||[];
-    return `<article class="logic-card" data-step-card="${esc(s.step_id)}"><div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">STEP ${String(s.ordinal).padStart(2,'0')}${s.reading_group?' · '+esc(groupTitle(s.reading_group)):''}</span>${confidencePill(s)}${rolePill}${mentions}</div><h2>${hl(s.title)}</h2></div>`+
+    return `<article class="logic-card" data-step-card="${esc(s.step_id)}"><div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">步驟 ${s.ordinal}${s.reading_group?' · '+esc(groupTitle(s.reading_group)):''}</span>${confidencePill(s)}${rolePill}${mentions}</div><h2>${hl(s.title)}</h2></div>`+
       `<div class="logic-summary story-lead">${hl(s.plain_summary)}</div>`+
       logicIoSection(s)+
-      `<div class="logic-links"><span class="logic-links-label">關聯模組：</span>${chips||'<span class="logic-muted-inline">來源未建立直接模組對應（不以名稱猜測）</span>'}</div>`+
-      (notes?`<details class="logic-context-accordion logic-scope-notes"><summary>📂 Agent 範圍備註（來源欄位原文，未用於自動歸屬）</summary>${notes}</details>`:'')+
-      `<details class="logic-context-accordion logic-evidence"><summary>📂 步驟來源證據與斷點資訊（${evRefs.length} 筆來源證據${gaps.length?` · ${gaps.length} 項缺口註記`:''} — 點擊展開）</summary>${evRefs.map((r,i)=>`<button class="logic-chip source-chip" data-logic-source="${i}" data-logic-source-step="${esc(s.step_id)}">${esc(r.display_date||'日期未知')} · 精度 ${esc(r.date_precision)} · ${esc(r.evidence_type)} · ${esc(r.coverage)}<small>${esc(r.title)}</small></button>`).join('')||'<p>來源未記載</p>'}${gaps.length?`<div class="logic-gaps-inline">${gaps.map(g=>`<span class="pill amber">缺口：${esc(g)}</span>`).join('')}</div>`:''}<p class="logic-break ${s.next_step_status==='connected'?'connected':''}">${s.next_step_status==='connected'?'↓ 有來源順序關係；不表示已執行':'⚠ '+esc(s.break_reason)}</p></details></article>`;
+      `<div class="logic-links"><span class="logic-links-label">相關功能：</span>${chips||'<span class="logic-muted-inline">尚無相關功能紀錄</span>'}</div>`+
+      (notes?`<details class="logic-context-accordion logic-scope-notes"><summary>適用範圍</summary>${notes}</details>`:'')+
+      `<details class="logic-context-accordion logic-evidence"><summary>來源紀錄（${evRefs.length} 筆來源證據${gaps.length?` · ${gaps.length} 項缺口註記`:''}）</summary>${evRefs.map((r,i)=>`<button class="logic-chip source-chip" data-logic-source="${i}" data-logic-source-step="${esc(s.step_id)}">${esc(r.display_date||'日期未知')} · 精度 ${esc(r.date_precision)} · ${esc(r.evidence_type)} · ${esc(r.coverage)}<small>${esc(r.title)}</small></button>`).join('')||'<p>來源未記載</p>'}${gaps.length?`<div class="logic-gaps-inline">${gaps.map(g=>`<span class="pill amber">缺口：${esc(g)}</span>`).join('')}</div>`:''}<p class="logic-break ${s.next_step_status==='connected'?'connected':''}">${s.next_step_status==='connected'?'↓ 記錄中的下一步':'⚠ '+esc(s.break_reason)}</p></details></article>`;
   }
-  const breakpoint=()=>`<article class="logic-breakpoint" role="note"><h3>⚠ 後續未取得資料</h3><p>來源到此為止。未記載的下一步、分支條件或工具呼叫不會被補寫；這裡不是執行結束點。</p></article>`;
+  const breakpoint=()=>`<article class="logic-breakpoint" role="note"><h3>⚠ 後續未取得資料</h3><p>後續流程尚無紀錄。</p></article>`;
   function casePanel(m){
     const ctx=m?.assessment_context||{};
     const causes=m?.cause_assessments||[];
     const gaps=ctx.data_gaps||[],vals=ctx.validation_evidence||[];
-    return `<section class="case-panel"><div class="case-panel-head"><h3>案例正反證據對照與四大根因矩陣（4M）</h3><span class="scope">${esc(m.input_snapshot_notice)} · 未綁定 Job · ${esc(m.display_date)}</span></div>`+
-      `<div class="case-compare"><section class="io-block support"><h4>✓ 支持證據 Support</h4><p>${hl(m.support||'來源未記載')}</p></section><section class="io-block counter"><h4>✗ 反面證據 Counter Evidence</h4><p>${hl(m.counter_evidence||'來源未記載')}</p></section></div>`+
+    return `<section class="case-panel"><div class="case-panel-head"><h3>案例分析與證據</h3><span class="scope">${esc(m.input_snapshot_notice)} · 未綁定 Job · ${esc(m.display_date)}</span></div>`+
+      `<div class="case-compare"><section class="io-block support"><h4>支持的證據</h4><p>${hl(m.support||'來源未記載')}</p></section><section class="io-block counter"><h4>不支持的證據</h4><p>${hl(m.counter_evidence||'來源未記載')}</p></section></div>`+
       `<div class="cause-grid">${causes.map(c=>`<article class="cause-card"><div class="cause-card-top"><h4>${esc(c.category_label||c.category)} <small>${esc(c.category)}</small></h4><span class="pill amber">${esc(c.status)}</span></div><p>${hl(c.detail)}</p><small>${esc(c.evidence_type)} · ${esc(c.source_record)}</small></article>`).join('')||'<p class="logic-muted-inline">來源未記載</p>'}</div>`+
-      `<div class="case-compare"><section class="io-block"><h4>結論與下一步 Conclusion</h4><p>${hl(m.conclusion||'來源未記載')}${m.next_step?`\n下一步（來源回報）：${hl(m.next_step)}`:''}</p></section><section class="io-block unknowns"><h4>⚠ 未知與待查缺口 Unknowns</h4><p>${hl(m.unknowns||'來源未記載')}</p></section></div>`+
-      `<details class="logic-context-accordion case-context"><summary>📂 同批次評估背景參考（${gaps.length} 項資料缺口 · ${vals.length} 項驗證證據 — 點擊展開）</summary><p class="io-basis">${esc(ctx.basis||'')} · 評估批次 ${esc(ctx.assessment_id||'未記載')} · 收錄 ${esc(ctx.assessment_captured_at||'未記載')}</p><h4>資料缺口（data_gaps）</h4>${gaps.map(g=>`<p><b>${hl(g.title)}</b> · ${esc(g.status)}<br>${hl(g.why)}<br><small>${esc(g.evidence_type)} · ${esc(g.source_record)}</small></p>`).join('')||'<p>來源未記載</p>'}<h4>驗證回報（validation_evidence）</h4>${vals.map(v=>`<p><b>${hl(v.title)}</b> · ${hl(v.result)}<br><small>${esc(v.display_date)}（原文日期，無年份）· ${esc(v.evidence_type)} · ${esc(v.source_record)}</small></p>`).join('')||'<p>來源未記載</p>'}</details></section>`;
+      `<div class="case-compare"><section class="io-block"><h4>結論與下一步</h4><p>${hl(m.conclusion||'來源未記載')}${m.next_step?`\n下一步（來源回報）：${hl(m.next_step)}`:''}</p></section><section class="io-block unknowns"><h4>還不知道的事</h4><p>${hl(m.unknowns||'來源未記載')}</p></section></div>`+
+      `<details class="logic-context-accordion case-context"><summary>其他背景（${gaps.length} 項資料缺口 · ${vals.length} 項驗證證據）</summary><p class="io-basis">${esc(ctx.basis||'')} · 評估批次 ${esc(ctx.assessment_id||'未記載')} · 收錄 ${esc(ctx.assessment_captured_at||'未記載')}</p><h4>缺少的資料</h4>${gaps.map(g=>`<p><b>${hl(g.title)}</b> · ${esc(g.status)}<br>${hl(g.why)}<br><small>${esc(g.evidence_type)} · ${esc(g.source_record)}</small></p>`).join('')||'<p>來源未記載</p>'}<h4>測試結果</h4>${vals.map(v=>`<p><b>${hl(v.title)}</b> · ${hl(v.result)}<br><small>${esc(v.display_date)}（原文日期，無年份）· ${esc(v.evidence_type)} · ${esc(v.source_record)}</small></p>`).join('')||'<p>來源未記載</p>'}</details></section>`;
   }
   function renderTrackBar(){
     const lg=logicData(),ag=$('#agent')?.value==='history'?'history':'action';
@@ -270,8 +270,8 @@
     $('#logic-next').disabled=!steps.length||logicIndex===steps.length-1||logicAll;
     $('#logic-all').disabled=!steps.length;$('#logic-all').setAttribute('aria-pressed',logicAll);$('#logic-all').textContent=logicAll?'聚焦單一步驟':'展開全部步驟';
     const filtered=m&&steps.length<(m.steps?.length||0);
-    $('#logic-position').textContent=!steps.length?'沒有可讀步驟':logicAll?`全部 ${steps.length} 步`:`Step ${logicIndex+1} / ${steps.length}`;
-    $('#logic-search-note').textContent=query()?(filtered?`搜尋篩選：${steps.length} / ${m.steps.length} 個步驟符合`:m?'搜尋：素材符合，顯示全部步驟':'搜尋：沒有符合的素材'):'';
+    $('#logic-position').textContent=!steps.length?'沒有可讀步驟':logicAll?`全部 ${steps.length} 步`:`${logicIndex+1} / ${steps.length}`;
+    $('#logic-search-note').textContent=query()?(filtered?`搜尋篩選：${steps.length} / ${m.steps.length} 個步驟符合`:m?'符合搜尋條件':'找不到符合項目'):'';
     const last=steps[steps.length-1];
     $('#logic-rail').innerHTML=steps.map((s,i)=>`<div class="rail-entry"><button class="${s.step_confidence==='documented'?'documented':'partial'}" data-logic-step="${i}" ${i===logicIndex&&!logicAll?'aria-current="step"':''} title="${esc(s.title)}"><span>${String(s.ordinal).padStart(2,'0')}</span><em>${hl(s.title)}</em></button>${i<steps.length-1||s.next_step_status!=='data_cutoff'?`<div class="rail-link ${s.next_step_status==='connected'?'confirmed':'partial'}">${linkLabel(s)}</div>`:''}</div>`).join('')+
       (last&&last.next_step_status==='data_cutoff'?'<div class="rail-entry"><div class="rail-break" role="note">⚠ 後續未取得資料</div></div>':'');
@@ -281,15 +281,15 @@
       const otherAg=ag==='action'?'history':'action';
       const otherLabel=ag==='action'?'歷史調查型':'MVP 行動型';
       const hasQuery=Boolean(query());
-      $('#logic-content').innerHTML=`<div class="logic-empty"><h2>這個範圍尚無符合的推演素材</h2><p>目前選取的 Agent 範圍或搜尋條件下沒有可讀步驟。缺少來源時系統不會自動生成或腦補流程。</p><p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p><div class="logic-empty-actions">${hasQuery?`<button type="button" class="logic-reset-scope" data-clear-search="1">↺ 清除搜尋</button>`:''}<button type="button" class="logic-switch-agent" data-switch-agent="${otherAg}">⇄ 切換至「${otherLabel}」</button></div></div>`;
+      $('#logic-content').innerHTML=`<div class="logic-empty"><h2>找不到符合的流程</h2><p>請切換 Agent 或清除搜尋。</p><p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p><div class="logic-empty-actions">${hasQuery?`<button type="button" class="logic-reset-scope" data-clear-search="1">↺ 清除搜尋</button>`:''}<button type="button" class="logic-switch-agent" data-switch-agent="${otherAg}">⇄ 切換至「${otherLabel}」</button></div></div>`;
       return;
     }
     const shown=logicAll?steps:[steps[logicIndex]];
     const atEnd=logicAll||logicIndex===steps.length-1;
     const qList=lg.query_abilities||[],relList=m.documented_relationships||[];
-    $('#logic-content').innerHTML=`<div class="material-heading"><div class="material-heading-top"><span class="pill purple">${materialLabel(m)}</span><span class="pill amber">來源部分覆蓋</span><span class="pill gray">${esc(scopeLabel(m))}</span><h2>${hl(m.title)}</h2></div><p>${esc(m.ordering_basis)}${m.scope_basis?` · ${esc(m.scope_basis)}`:''}</p></div>`+
+    $('#logic-content').innerHTML=`<div class="material-heading"><div class="material-heading-top"><span class="pill purple">${materialLabel(m)}</span><span class="pill amber">只有部分紀錄</span><span class="pill gray">${esc(scopeLabel(m))}</span><h2>${hl(m.title)}</h2></div><p>${esc(m.ordering_basis)}${m.scope_basis?` · ${esc(m.scope_basis)}`:''}</p></div>`+
       shown.map(s=>logicCard(s)).join('')+(atEnd&&last.next_step_status==='data_cutoff'?breakpoint():'')+
-      (m.material_type==='case_report'?casePanel(m):`<details class="logic-context-accordion query-background"><summary>📂 相關查詢能力與架構關係背景（${qList.length} 項查詢能力 · ${relList.length} 項架構關係 — 點擊展開）</summary><h4>相關查詢能力回報（非本流程呼叫紀錄）</h4>${qList.map(q=>`<article><h3>${hl(q.title)}</h3><p>${hl(q.description)}</p><small>${esc(q.source)} · ${esc(q.evidence_type)} · ${esc(q.usage_status)} · ${esc(q.source_record)}</small></article>`).join('')||'<p>來源未記載</p>'}<h4>架構關係背景（不作執行順序）</h4>${relList.map(r=>`<p>${esc(entity(r.source)?.title)} → ${esc(entity(r.target)?.title)}：${esc(r.label)}</p>`).join('')||'<p>沒有直接對應的 documented 架構關係。</p>'}<p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p></details>`);
+      (m.material_type==='case_report'?casePanel(m):`<details class="logic-context-accordion query-background"><summary>📂 其他參考資料（${qList.length} 項查詢能力 · ${relList.length} 項架構關係）</summary><h4>已有查詢功能</h4>${qList.map(q=>`<article><h3>${hl(q.title)}</h3><p>${hl(q.description)}</p><small>${esc(q.source)} · ${esc(q.evidence_type)} · ${esc(q.usage_status)} · ${esc(q.source_record)}</small></article>`).join('')||'<p>來源未記載</p>'}<h4>相關架構</h4>${relList.map(r=>`<p>${esc(entity(r.source)?.title)} → ${esc(entity(r.target)?.title)}：${esc(r.label)}</p>`).join('')||'<p>尚無相關架構紀錄。</p>'}<p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p></details>`);
     syncLogicDrawer(steps[logicIndex]||steps[0],m);
   }
   function moveLogic(index){$('#step-picker').hidden=true;$('#thumb-position').setAttribute('aria-expanded','false');logicAll=false;logicIndex=index;renderLogic();$('#logic-content').scrollTop=0;$('#logic-rail [aria-current]')?.scrollIntoView({block:'nearest',inline:mobile()?'center':'nearest',behavior:mobile()&&!matchMedia('(prefers-reduced-motion:reduce)').matches?'smooth':'instant'});}
@@ -300,12 +300,12 @@
   // 共用來源抽屜（Agent Logic 與 Progress 共用）：只顯示來源紀錄，不當成執行步驟。
   function sourceDrawer(r,sourceButton,focus=true,autoSync=false){
     origin=sourceButton;selected=null;
-    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close" aria-label="關閉詳情">✕ 關閉抽屜</button><div class="eyebrow">SOURCE EXPLORER${autoSync?' · 步驟自動連動':''}</div><h2>${esc(r.title)}</h2></div>`+
-      step(1,'白話理解',`<p>${esc(r.summary||'來源未記載')}</p>`,true)+
-      step(2,'角色與運作',`<p>此為來源紀錄，不是執行步驟。</p><p>${esc(r.source_record)}</p><p>${esc(r.conversation_title||'對話標題未取得')} · ${esc(r.conversation_id||'無對話 ID')}</p>`)+
-      step(3,'狀態與驗收缺口',`<p>${esc(r.evidence_type)} · ${esc(r.coverage)} · ${esc(r.source_status)}</p>${(r.gaps||[]).map(g=>`<p>${esc(g)}</p>`).join('')}`)+
-      step(4,'技術細節與限制',`<dl>${pair('來源 ID',r.source_record)}${pair('事件 ID',r.event_id||'未建立直接事件關聯')}${pair('日期精度',r.date_precision)}${pair('關聯訊息',r.message_ids||[])}</dl>`)+
-      step(5,'原始對話證據',r.event_id?evidence([r]):`<p>案例資料表保存的回報；原始對話映射與輸入 Snapshot 未取得。</p>`);
+    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close" aria-label="關閉詳情">✕ 關閉</button><div class="eyebrow">來源紀錄${autoSync?' · 步驟自動連動':''}</div><h2>${esc(r.title)}</h2></div>`+
+      step(1,'用途',`<p>${esc(r.summary||'來源未記載')}</p>`,true)+
+      step(2,'如何運作',`<p>此為來源紀錄，不是執行步驟。</p><p>${esc(r.source_record)}</p><p>${esc(r.conversation_title||'對話標題未取得')} · ${esc(r.conversation_id||'無對話 ID')}</p>`)+
+      step(3,'完成情況',`<p>${esc(r.evidence_type)} · ${esc(r.coverage)} · ${esc(r.source_status)}</p>${(r.gaps||[]).map(g=>`<p>${esc(g)}</p>`).join('')}`)+
+      step(4,'技術資訊',`<dl>${pair('來源 ID',r.source_record)}${pair('事件 ID',r.event_id||'未建立直接事件關聯')}${pair('日期精度',r.date_precision)}${pair('關聯訊息',r.message_ids||[])}</dl>`)+
+      step(5,'參考紀錄',r.event_id?evidence([r]):`<p>案例資料表保存的回報；原始對話映射與輸入 Snapshot 未取得。</p>`);
     $('#drawer').classList.add('open');$('#drawer').classList.toggle('auto-synced',Boolean(autoSync));$('#drawer').scrollTop=0;if(focus)$('#close').focus();
     enhanceMobileDrawer();syncSheet();
   }
@@ -375,7 +375,7 @@
     return statusMeta(status).filter===progressFilter;
   };
   const pMatch=(o,status)=>searchLogic([o.title,o.plain_summary,o.status_basis,o.basis,o.why,o.description,o.result,o.detail,o.reason,o.next_step,o.missing_evidence,o.implementation,o.validation,o.limits,o.io,o.kind,statusMeta(status).label].filter(x=>x!=null));
-  const emptyNote='<div class="p-zero-result"><p class="logic-unknown">⚠️ 目前篩選結果：0 項符合</p><p class="io-basis">點擊下方按鈕或上方已選取的卡片，即可恢復完整總覽。</p><button type="button" class="p-reset-btn" data-progress-reset="1">↺ 返回完整總覽</button></div>';
+  const emptyNote='<div class="p-zero-result"><p class="logic-unknown">⚠️ 目前篩選結果：0 項符合</p><p class="io-basis">點擊下方按鈕或上方已選取的卡片，即可恢復完整總覽。</p><button type="button" class="p-reset-btn" data-progress-reset="1">↺ 顯示全部</button></div>';
   const section=(title,count,body,note='')=>`<section class="p-section"><h2>${esc(title)} <small>${count} 項</small></h2>${note?`<p class="io-basis">${esc(note)}</p>`:''}${body||emptyNote}</section>`;
   // 事件型來源：由實體既有證據取回完整事件，不在 progress 內重複儲存。
   const evRefs=(entityId,ids)=>{const evs=entity(entityId)?.evidence_and_history?.events||[];return (ids||[]).map(i=>evs.find(e=>e.event_id===i)).filter(Boolean);};
@@ -399,14 +399,14 @@
 
     const headerHtml=isFiltered
       ?`<div class="p-strip-header">`+
-          `<div class="p-strip-title"><strong>目前篩選檢視：${esc(filterTitle)}（${esc(agentLabel)}）</strong></div>`+
+          `<div class="p-strip-title"><strong>篩選結果：${esc(filterTitle)}（${esc(agentLabel)}）</strong></div>`+
           `<div class="p-strip-actions">`+
-            `<button type="button" class="p-reset-btn" data-progress-reset="1">↺ 返回完整總覽（${esc(pop)} 項）</button>`+
+            `<button type="button" class="p-reset-btn" data-progress-reset="1">↺ 顯示全部（${esc(pop)} 項）</button>`+
           `</div>`+
         `</div>`
       :`<div class="p-strip-header">`+
-          `<div class="p-strip-title"><strong>完整能力總覽（${esc(agentLabel)} · 共 ${esc(pop)} 項）</strong></div>`+
-          `<div class="p-strip-hint">點擊下方任一卡片可直接篩選對應項目；再點一次或按返回即可恢復總覽</div>`+
+          `<div class="p-strip-title"><strong>能力總覽（${esc(agentLabel)} · 共 ${esc(pop)} 項）</strong></div>`+
+          `<div class="p-strip-hint">點選數字可篩選。</div>`+
         `</div>`;
 
     const cardsHtml=`<div class="p-metrics">`+
@@ -432,7 +432,7 @@
     return `<article class="p-card p-group" data-group="${esc(g.id)}"><div class="p-card-head"><h3>${hl(g.title)}</h3>${countBadge}</div>`+
       `<p class="io-basis">${esc(g.summary)} · ${esc(g.basis||'')}</p>`+
       `<div class="seg-bar" role="img" aria-label="${esc(legend)}">${seg('ev',(c.verified||0)+(c.supported||0))}${seg('mid',(c.partial||0)+(c.claimed||0))}${seg('low',(c.design_only||0)+(c.unknown||0)+(c.superseded||0))}${seg('red',c.unresolved||0)}</div>`+
-      `<p class="p-legend">${esc(legend)}</p><p class="io-basis">驗證證據事件 ${g.verified_evidence_event_count??0} · 來源事件 ${g.source_event_count??0}</p>`+
+      `<p class="p-legend">${esc(legend)}</p><p class="io-basis">驗證紀錄 ${g.verified_evidence_event_count??0} · 來源事件 ${g.source_event_count??0}</p>`+
       `<div class="p-chips">${items.map(i=>`<button class="p-chip st-${esc(i.status)}" data-jump="${esc(i.id)}" title="${esc(i.status_basis)}"><i class="dot"></i><span>${hl(i.title)}</span><small>${esc(statusMeta(i.status).label)}</small></button>`).join('')||emptyNote}</div>`+
       (extra?`<details class="p-blockers"><summary>阻塞點與未知 · ${extra}</summary>${blockers.map(b=>`<button class="jump" data-jump="${esc(b.id)}">${b.severity==='red'?'🔴 紅標籤':'🟠 待查'}：${esc(b.title)}<small>${esc(b.reason)}</small></button>`).join('')}${unknowns.map(b=>`<button class="jump" data-jump="${esc(b.id)}">未知：${esc(b.title)}<small>${esc(b.reason)}</small></button>`).join('')}${missing.length?`<h4>尚缺驗收（來源原文）</h4>${missing.map(b=>`<p><b>${esc(b.title)}</b>：${esc(b.note)}</p>`).join('')}`:''}</details>`:'')+`</article>`;
   }
@@ -442,7 +442,7 @@
       if(!gaps.length){
         return {html:`<div class="p-grid">${emptyNote}</div>`,shown:0};
       }
-      const gapCards=gaps.map(x=>`<article class="p-card p-issue red-flag"><div class="p-card-head"><h3>${hl(x.title)}</h3><span class="pill red">資料缺口</span></div><p class="p-summary">${hl(x.why)}</p><p class="io-basis">來源狀態：${esc(x.status)} · ${esc(x.evidence_type)} · 評估批次 ${esc(x.assessment_id)}</p><p class="p-basis">建議下一步：<span class="logic-unknown">來源未記載（unknown）</span></p>${sourceButton(x.source_record)}</article>`).join('');
+      const gapCards=gaps.map(x=>`<article class="p-card p-issue red-flag"><div class="p-card-head"><h3>${hl(x.title)}</h3><span class="pill red">資料缺口</span></div><p class="p-summary">${hl(x.why)}</p><p class="io-basis">來源狀態：${esc(x.status)} · ${esc(x.evidence_type)} · 評估批次 ${esc(x.assessment_id)}</p><p class="p-basis">建議下一步：<span class="logic-unknown">尚無紀錄</span></p>${sourceButton(x.source_record)}</article>`).join('');
       const html=`<div class="p-grid"><article class="p-card p-group" style="grid-column:1 / -1;"><div class="p-card-head"><h3>評估批次收錄的資料缺口</h3><span class="pill mint">${gaps.length} 項符合</span></div><p class="io-basis">來源：評估批次資料表記錄 · 獨立於實體母體</p><div class="p-grid" style="margin-top:8px">${gapCards}</div></article></div>`;
       return {html,shown:gaps.length};
     }
@@ -454,19 +454,19 @@
   }
   const skillCard=s=>`<article class="p-card" data-skill="${esc(s.id)}"><div class="p-card-head"><h3>${hl(s.title)}</h3>${statusPill(s.status)}<span class="pill gray">${esc(skillTypeLabel[s.skill_type]||s.skill_type)}</span></div>`+
     `<p class="p-basis">${esc(s.status_basis)}</p><p class="p-summary">${hl(s.plain_summary)}</p>`+
-    `<div class="p-io">${valueBlock('輸入 Inputs',s.io?.inputs)}${valueBlock('輸出 Outputs',s.io?.outputs)}${valueBlock('已知限制',s.limits)}</div>`+
-    `<p class="io-basis">I/O 記載：${esc(s.io?.status||'unknown')} · 獨立驗證：${esc(s.independent_verification||'unknown')}</p>`+
-    `<button class="logic-chip" data-jump="${esc(s.id)}">開啟五層詳情 ↗</button>${evidenceList(s.id,s.evidence_event_ids)}</article>`;
+    `<div class="p-io">${valueBlock('輸入',s.io?.inputs)}${valueBlock('輸出',s.io?.outputs)}${valueBlock('已知限制',s.limits)}</div>`+
+    `<p class="io-basis">輸入輸出：${esc(s.io?.status||'unknown')} · 測試：${esc(s.independent_verification||'unknown')}</p>`+
+    `<button class="logic-chip" data-jump="${esc(s.id)}">查看詳情 ↗</button>${evidenceList(s.id,s.evidence_event_ids)}</article>`;
   const queryCard=q=>`<article class="p-card"><div class="p-card-head"><h3>${hl(q.title)}</h3>${statusPill(q.status)}<span class="pill gray">查詢能力回報</span></div><p class="p-basis">${esc(q.status_basis)}</p><p class="p-summary">${hl(q.description)}</p>`+
-    `<div class="p-io">${valueBlock('輸入 Inputs',q.io?.inputs)}${valueBlock('輸出 Outputs',q.io?.outputs)}${valueBlock('已知限制',q.limits)}</div><p class="io-basis">${esc(q.source)} · ${esc(q.evidence_type)} · 評估批次收錄 ${esc(q.assessment_captured_at||'未記載')}</p>${sourceButton(q.source_record)}</article>`;
+    `<div class="p-io">${valueBlock('輸入',q.io?.inputs)}${valueBlock('輸出',q.io?.outputs)}${valueBlock('已知限制',q.limits)}</div><p class="io-basis">${esc(q.source)} · ${esc(q.evidence_type)} · 評估批次收錄 ${esc(q.assessment_captured_at||'未記載')}</p>${sourceButton(q.source_record)}</article>`;
   const validationCard=v=>`<article class="p-card"><div class="p-card-head"><h3>${hl(v.title)}</h3>${statusPill(v.status)}<span class="pill gray">驗證回報</span></div><p class="p-basis">${esc(v.status_basis)}</p>`+
-    `<p class="p-result"><b>回報結果（原文）：</b>${hl(v.result)}</p>${v.detail?`<p class="p-summary">${hl(v.detail)}</p>`:''}<p class="io-basis">${esc(v.display_date)}（原文日期，無年份）· ${esc(v.evidence_type)}</p>${sourceButton(v.source_record)}</article>`;
+    `<p class="p-result"><b>測試結果：</b>${hl(v.result)}</p>${v.detail?`<p class="p-summary">${hl(v.detail)}</p>`:''}<p class="io-basis">${esc(v.display_date)}（原文日期，無年份）· ${esc(v.evidence_type)}</p>${sourceButton(v.source_record)}</article>`;
   function skillsView(p){
     const sm=p.skill_matrix||{};
     const skills=(sm.skills||[]).filter(s=>passes(s.status)&&pMatch(s,s.status));
     const queries=(sm.query_abilities||[]).filter(s=>passes(s.status)&&pMatch(s,s.status));
     const vals=(sm.validation_evidence||[]).filter(s=>passes(s.status)&&pMatch(s,s.status));
-    return {html:section('調查類型與 Tool',skills.length,skills.map(skillCard).join(''),sm.basis||'')+section('查詢能力回報（query_abilities）',queries.length,queries.map(queryCard).join(''))+section('驗證回報（validation_evidence）',vals.length,vals.map(validationCard).join('')),shown:skills.length+queries.length+vals.length};
+    return {html:section('調查能力',skills.length,skills.map(skillCard).join(''),sm.basis||'')+section('查詢能力',queries.length,queries.map(queryCard).join(''))+section('測試結果',vals.length,vals.map(validationCard).join('')),shown:skills.length+queries.length+vals.length};
   }
   function gapsView(p){
     const g=p.gaps_and_issues||{};
@@ -474,18 +474,18 @@
     const gaps=(g.data_gaps||[]).filter(i=>(progressFilter==='all'||progressFilter==='unresolved'||progressFilter==='data_gaps')&&pMatch(i,'unresolved'));
     const recs=(progressFilter==='all'||progressFilter==='next')?(g.batch_recommendations||[]).filter(i=>pMatch(i,'design_only')):[];
     const claims=(g.unsupported_claims||[]).filter(i=>passes(i.status)&&pMatch(i,i.status));
-    const stepText=(v,basis)=>basis==='source'?esc(v):'<span class="logic-unknown">來源未記載（unknown）</span>';
+    const stepText=(v,basis)=>basis==='source'?esc(v):'<span class="logic-unknown">尚無紀錄</span>';
     const issueCard=i=>`<article class="p-card p-issue ${i.severity==='red'?'red-flag':'amber-flag'}"><div class="p-card-head"><h3>${hl(i.title)}</h3><span class="pill ${i.severity==='red'?'red':'amber'}">${i.severity==='red'?'🔴 紅標籤':'🟠 待查'}</span></div><p class="p-basis">${esc(i.basis)}</p>`+
-      `<div class="p-io two"><section class="io-block"><h4>建議下一步</h4><p>${stepText(i.next_step,i.next_step_basis)}</p></section><section class="io-block"><h4>缺少的證據</h4><p>${i.missing_evidence==='unknown'?'<span class="logic-unknown">來源未記載（unknown）</span>':hl(i.missing_evidence)}</p></section></div>`+
-      `<button class="logic-chip" data-jump="${esc(i.id)}">開啟五層詳情 ↗</button>${evidenceList(i.id,i.evidence_event_ids)}</article>`;
+      `<div class="p-io two"><section class="io-block"><h4>建議下一步</h4><p>${stepText(i.next_step,i.next_step_basis)}</p></section><section class="io-block"><h4>缺少的證據</h4><p>${i.missing_evidence==='unknown'?'<span class="logic-unknown">尚無紀錄</span>':hl(i.missing_evidence)}</p></section></div>`+
+      `<button class="logic-chip" data-jump="${esc(i.id)}">查看詳情 ↗</button>${evidenceList(i.id,i.evidence_event_ids)}</article>`;
     const gapCard=x=>`<article class="p-card p-issue red-flag"><div class="p-card-head"><h3>${hl(x.title)}</h3><span class="pill red">資料缺口</span></div><p class="p-summary">${hl(x.why)}</p>`+
-      `<p class="io-basis">來源狀態：${esc(x.status)} · ${esc(x.evidence_type)} · 評估批次 ${esc(x.assessment_id)}</p><p class="p-basis">建議下一步：<span class="logic-unknown">來源未記載（unknown）</span>（見下方批次建議，非本缺口的指定解法）</p>${sourceButton(x.source_record)}</article>`;
+      `<p class="io-basis">來源狀態：${esc(x.status)} · ${esc(x.evidence_type)} · 評估批次 ${esc(x.assessment_id)}</p><p class="p-basis">建議下一步：<span class="logic-unknown">尚無紀錄</span>（見下方批次建議，非本缺口的指定解法）</p>${sourceButton(x.source_record)}</article>`;
     const recCard=x=>`<article class="p-card"><div class="p-card-head"><h3>${hl(x.title)}</h3><span class="pill purple">批次建議</span></div><p class="p-summary">${hl(x.why)}</p><p class="io-basis">${esc(x.basis)} · 狀態 ${esc(x.status)} · ${esc(x.source)}</p>${sourceButton(x.source_record)}</article>`;
     const claimRow=c=>`<button class="jump" data-jump="${esc(c.id)}">${statusPill(c.status)} ${hl(c.title)}<small>${esc(c.reason)}</small></button>`;
-    return {html:section('紅標籤與待查問題',issues.length,issues.map(issueCard).join(''),'紅標籤＝來源明確記載尚未解決；待查＝需再檢視、風險未驗證或待真實驗收。')+
-      section('資料缺口（data_gaps）',gaps.length,gaps.map(gapCard).join(''))+
-      section('評估批次建議',recs.length,recs.map(recCard).join(''))+
-      `<section class="p-section"><details class="p-claims"><summary>缺少獨立驗證的宣告 · ${claims.length} 項（實作回報不等於已驗證）</summary>${claims.map(claimRow).join('')||emptyNote}</details></section>`,
+    return {html:section('待處理問題',issues.length,issues.map(issueCard).join(''),'')+
+      section('缺少的資料',gaps.length,gaps.map(gapCard).join(''))+
+      section('建議處理',recs.length,recs.map(recCard).join(''))+
+      `<section class="p-section"><details class="p-claims"><summary>尚未確認的項目 · ${claims.length} 項</summary>${claims.map(claimRow).join('')||emptyNote}</details></section>`,
       shown:issues.length+gaps.length+recs.length+claims.length};
   }
   // 開發結案獨立於架構與驗證清單，統計僅使用持久化功能母體。
@@ -607,24 +607,25 @@
     const p=closureData(),all=p.items||[],matched=all.filter(closureMatch);
     const shown=matched.filter(i=>closureFilter==='all'||i.development_status===closureFilter);
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
-    $('#progress-note').textContent=`共 ${all.length} 項功能 · 搜尋符合 ${matched.length} · 目前顯示 ${shown.length}`;
-    const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong><small>${query()?`搜尋符合 ${matched.filter(i=>i.development_status===key).length} 項`:'點擊篩選 · 再點恢復全部'}</small></button>`).join('');
+    $('#progress-note').textContent=query()?`找到 ${matched.length} 項`:'';
+    const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong>${query()?`<small>符合 ${matched.filter(i=>i.development_status===key).length} 項</small>`:''}</button>`).join('');
     const rows=shown.map(i=>{
       const guide=closureExplain(i);
       return `<article class="p-card closure-item">
-        <button class="closure-item-open" data-closure-item="${esc(i.item_id)}">
-          <span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span>
-          <h3>${esc(guide.title)}</h3>
+        <details class="closure-card-fold">
+          <summary><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span>
+          <h3>${esc(guide.title)}</h3><span class="closure-toggle">展開</span></summary>
+          <div class="closure-card-content">
           <p class="closure-line"><b>功能</b><span>${esc(guide.purpose)}</span></p>
           <p class="closure-line"><b>進度</b><span>${esc(guide.progress)}</span></p>
           <p class="closure-line"><b>驗證</b><span>${esc(guide.check)}</span></p>
-          <span class="closure-more">查看說明與紀錄 ↗</span>
-        </button>
+          <button class="closure-card-more" data-closure-item="${esc(i.item_id)}">查看說明與紀錄 ↗</button>
         ${i.development_status==='NEEDS_USER_REVIEW'?`<button class="closure-verify" data-closure-verify="${esc(i.item_id)}">驗證此項 ↗</button>`:canReopen(i)?`<button class="closure-reopen" data-closure-verify="${esc(i.item_id)}">↶ 重新等待驗證</button>`:''}
+          </div>
+        </details>
       </article>`;
     }).join('');
-    const delivery=readonly?'手機送出驗證後，等待 Mac 同步才會更新狀態。':'驗證決定會寫入本機 SQLite。';
-    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><p class="closure-board-note">${delivery}</p><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
+    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
   }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
@@ -633,12 +634,12 @@
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     const reports=(i.reports||[]).map(r=>`<article class="event"><h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p><small>${esc(r.display_date)} · ${esc(r.evidence_type)} · ${esc(r.version_scope)}</small><p>Commit：${esc(r.commit||'尚未取得')}</p><code>${esc(r.event_id)}</code><p>${esc(r.reason)}</p></article>`).join('')||'<p>尚未找到相關回報；線上版不公開私人來源。</p>';
     const history=(i.history||[]).map(h=>`<article class="event"><b>${esc(closureLabels[h.development_status])}</b><p>${esc(h.decision_reason)}</p><small>${esc(h.at)} · ${esc(h.actor)} · ${esc(h.action)}</small></article>`).join('');
-    const mobileReview=window.__V2_STATIC_BUNDLE__? `<div class="mobile-review"><p><b>手機驗證（GitHub 帳號確認）</b>：下列操作會開啟 GitHub 的公開 Issue 編輯頁面；確認送出後，Mac 上的同步程序才會將決定寫入 SQLite 並更新網站。在同步前仍顯示「待我驗證」。請勿在公開 Issue 中填寫內部資料。</p><div class="closure-actions"><button type="button" data-review-remote="accept" data-review-id="${esc(i.item_id)}">通過・送出驗證</button><button type="button" data-review-remote="reject" data-review-id="${esc(i.item_id)}">需修正・送出</button><button type="button" data-review-remote="defer" data-review-id="${esc(i.item_id)}">暫緩・送出</button></div></div>`:'';
-    const manual=i.development_status==='NEEDS_USER_REVIEW'?(readonly?mobileReview:`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`):canReopen(i)?(readonly?(window.__V2_STATIC_BUNDLE__?`<div class="mobile-review"><p>撤銷前一次人工驗收，回到「待我驗證」。GitHub Issue 送出後仍須等待 Mac 同步；如果前一次驗證剛送出但尚未同步，請先關閉誤送的 GitHub Issue，避免版本衝突。</p><button class="closure-reopen" data-review-remote="reopen" data-review-id="${esc(i.item_id)}">↶ 重新等待驗證・送出</button></div>`:'<p>歷史切面唯讀，請回到最新狀態後操作。</p>'):`<form id="closure-review" data-item="${esc(i.item_id)}"><p>這會撤銷前一次人工決定，回到「待我驗證」。原本的驗收歷史仍會保留。</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" required></label>`}<label>撤銷原因<textarea name="reason" maxlength="2000" required>前次人工驗收按錯，重新等待驗證。</textarea></label><label><input type="checkbox" name="confirm" required>確認將狀態改回待我驗證</label><button class="closure-reopen" name="decision" value="reopen">↶ 重新等待驗證</button><p id="review-message" role="status"></p></form>`):'';
-    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉抽屜</button><div class="eyebrow">功能驗收</div><h2>${esc(guide.title)}</h2></div>`+
+    const mobileReview=window.__V2_STATIC_BUNDLE__? `<details class="closure-review-fold"><summary>選擇驗證結果</summary><div class="closure-actions"><button type="button" data-review-remote="accept" data-review-id="${esc(i.item_id)}">通過</button><button type="button" data-review-remote="reject" data-review-id="${esc(i.item_id)}">需修正</button><button type="button" data-review-remote="defer" data-review-id="${esc(i.item_id)}">暫緩</button></div></details>`:'';
+    const manual=i.development_status==='NEEDS_USER_REVIEW'?(readonly?mobileReview:`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`):canReopen(i)?(readonly?(window.__V2_STATIC_BUNDLE__?`<details class="closure-review-fold"><summary>撤銷驗證</summary><button class="closure-reopen" data-review-remote="reopen" data-review-id="${esc(i.item_id)}">重新等待驗證</button></details>`:'<p>歷史切面唯讀，請回到最新狀態後操作。</p>'):`<form id="closure-review" data-item="${esc(i.item_id)}"><p>這會撤銷前一次人工決定，回到「待我驗證」。原本的驗收歷史仍會保留。</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" required></label>`}<label>撤銷原因<textarea name="reason" maxlength="2000" required>前次人工驗收按錯，重新等待驗證。</textarea></label><label><input type="checkbox" name="confirm" required>確認將狀態改回待我驗證</label><button class="closure-reopen" name="decision" value="reopen">↶ 重新等待驗證</button><p id="review-message" role="status"></p></form>`):'';
+    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉</button><div class="eyebrow">功能驗收</div><h2>${esc(guide.title)}</h2></div>`+
       step(1,'這項功能要做什麼？',`<p class="closure-detail-text">${esc(guide.purpose)}</p><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><p class="closure-detail-text">${esc(guide.progress)}</p>`,true)+
       step(2,'我需要確認什麼？',`<p class="closure-detail-text">${esc(guide.check)}</p><p class="closure-detail-text"><b>通過條件：</b>${esc(guide.pass)}</p>${manual}`,i.development_status==='NEEDS_USER_REVIEW'||canReopen(i))+
-      step(3,'原始回報與限制',`<p>${esc(i.acceptance_scope)}</p><p>${esc(i.decision_reason)}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p><p>驗證等級：${esc(i.verification_level)} · 結案依據：${esc(i.closure_basis||'尚未結案')}</p>${reports}`)+
+      step(3,'原始回報與限制',`<p>${esc(i.acceptance_scope)}</p><p>${esc(i.decision_reason)}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p><p>驗證情況：${esc(i.verification_level)} · 確認依據：${esc(i.closure_basis||'尚未結案')}</p>${reports}`)+
       step(4,'驗收與狀態歷史',history||'<p>尚無人工驗收紀錄。</p>')+
       step(5,'原有知識與證據入口',(i.entity_ids||[]).filter(id=>entity(id)).map(id=>`<button class="jump" data-jump="${esc(id)}">${esc(entity(id).title)} ↗</button>`).join('')||'<p>來源索引保留於本機稽核紀錄。</p>');
     $('#drawer').classList.add('open');$('#drawer').classList.remove('auto-synced');$('#drawer').scrollTop=0;enhanceMobileDrawer();syncSheet();$('#close').focus();
@@ -656,11 +657,11 @@
     if(!['accept','reject','defer','reopen'].includes(decision))return;
     if(decision==='reopen'?!canReopen(item):item.development_status!=='NEEDS_USER_REVIEW')return;
     const label={accept:'通過',reject:'需修正',defer:'暫緩',reopen:'重新等待驗證'}[decision];
-    if(!confirm(`確定將「${item.title}」${decision==='reopen'?'恢復成待我驗證（原驗收歷史保留）':'送出「'+label+'」'}？還需要到 GitHub 提交 Issue，SQLite 不會立即更新。`))return;
+    if(!confirm(`「${item.title}」確定${decision==='reopen'?'重新等待驗證':label}？（需再送出 GitHub Issue）`))return;
     const reason={accept:'本人已核對本項功能的公開驗收範圍，確認通過。',reject:'本人已核對本項功能，確認仍需修正；詳細內容留在本機。',defer:'本次暫緩確認，待進一步驗證。',reopen:'前次人工驗收按錯，重新等待驗證。'}[decision];
     const payload={schema:'pih-mobile-review-v1',item_id:item.item_id,expected_updated_at:item.updated_at,decision,reason};
     const title=`[PIH-REVIEW] ${decision} ${item.item_id}`;
-    const body='<!-- pih-mobile-review-v1 -->\n```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n此 Issue 僅供手機人工驗收佇列使用。請勿加入私人或公司內部資料。';
+    const body='<!-- pih-mobile-review-v1 -->\n```json\n'+JSON.stringify(payload,null,2)+'\n```';
     const url=new URL('https://github.com/NickWang0317/project-hub-view/issues/new');
     url.searchParams.set('title',title);url.searchParams.set('body',body);
     window.open(url.toString(),'_blank','noopener,noreferrer');
@@ -683,7 +684,7 @@
     document.querySelectorAll('[data-progress-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.progressView===progressView));
     if(!p){
       $('#progress-note').textContent='';
-      $('#progress-content').innerHTML='<div class="logic-empty"><h2>此版本的 API 尚未提供進度資料</h2><p>前後端版本可能暫時不同步，請重新整理頁面。不會以其他資料推測進度。</p></div>';
+      $('#progress-content').innerHTML='<div class="logic-empty"><h2>目前沒有進度資料</h2><p>請重新整理。</p></div>';
       return;
     }
     if(p.closure&&progressView==='board'){closureBoard();return;}
@@ -725,7 +726,7 @@
   // ---- Evolution 演進視角：依對話與知識版本重建的設計演進史，非系統執行日誌。 ----
   let evoView='timeline',evoIndex=0,evoAll=false;
   const evoData=()=>data?.evolution||null;
-  const evoPrecisionLabel={timestamp:'精確時間戳 timestamp',day:'日期 day',free_text:'局部日期（無年份）free_text',unknown:'時間未記載 unknown'};
+  const evoPrecisionLabel={timestamp:'時間已確認',day:'僅知日期',free_text:'年份未確認',unknown:'時間未知'};
   const evoChangeTone={added:'green',updated:'blue',status_changed:'amber',superseded:'purple'};
   const evoShiftTone={superseded:'purple',status_shift:'amber',iterative_refinement:'blue'};
 
@@ -772,11 +773,11 @@
     const evs=b.events||[];
     const snaps=[...(b.snapshots||[]),...(b.assessments||[])];
     return `<article class="logic-card evo-batch-card" data-batch-card="${esc(b.batch_id)}">`+
-      `<div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">BATCH ${String(b.ordinal).padStart(2,'0')} · ${esc(b.date_label)}</span><span class="pill ${b.is_exact_time?'green':'amber'}">${esc(evoPrecisionLabel[b.time_precision]||b.time_precision)}</span><span class="pill blue">${esc(b.summary)}</span></div><h2>${hl(b.title)}</h2></div>`+
+      `<div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">第 ${b.ordinal} 批 · ${esc(b.date_label)}</span><span class="pill ${b.is_exact_time?'green':'amber'}">${esc(evoPrecisionLabel[b.time_precision]||b.time_precision)}</span><span class="pill blue">${esc(b.summary)}</span></div><h2>${hl(b.title)}</h2></div>`+
       (groups?`<div class="evo-groups-row"><span class="logic-links-label">影響概念群：</span>${groups}</div>`:'')+
-      (changes.length?`<section class="evo-section"><h3>知識版本新增／修訂／更迭（${changes.length} 筆）</h3><div class="evo-change-grid">${changes.map(c=>`<div class="evo-change-item"><div class="evo-change-top"><span class="pill ${evoChangeTone[c.change_type]||'gray'}">${esc(c.change_label)}</span><span class="pill gray">${esc(c.group_title)}</span><span class="pill amber">${esc(c.status)}</span></div><h4><button type="button" class="logic-chip" data-jump="${esc(c.entity_id)}">↗ ${hl(c.title)}</button></h4><p class="evo-change-desc">${hl(c.description)}</p><p class="io-basis">修訂原因：${c.change_reason_basis==='source'?hl(c.change_reason):'<span class="logic-unknown">來源未記載（unknown）</span>'} · 生效 ${esc(c.effective_at)} · 收錄 #${c.sequence} (${esc(c.recorded_at)})</p></div>`).join('')}</div></section>`:'')+
-      (snaps.length?`<section class="evo-section"><h3>架構與評估快照批次（${snaps.length} 筆）</h3><div class="evo-chip-wrap">${snaps.map(s=>`<button type="button" class="logic-chip source-chip" data-evolution-source="${esc(s.source_record)}">📸 ${hl(s.title)}<small>${esc(s.captured_at)}</small></button>${s.captured_at&&s.captured_at!=='unknown'?`<button type="button" class="logic-chip" data-evo-asof="${esc(s.captured_at)}">⏳ 預覽此時間切面</button>`:''}`).join('')}</div></section>`:'')+
-      (evs.length?`<details class="logic-context-accordion evo-events-acc" ${!changes.length?'open':''}><summary>📂 本批次關聯來源事件（${evs.length} 筆對話／歷史事件 — 點擊展開或點選晶片檢視來源）</summary><div class="evo-event-list">${evs.map(e=>`<div class="evo-event-row"><button type="button" class="logic-chip source-chip" data-evolution-source="${esc(e.source_record)}">📄 ${esc(e.display_date)} · ${esc(e.evidence_type)}<small>${hl(e.title)}</small></button><p>${hl(e.summary)}</p></div>`).join('')}</div></details>`:'')+
+      (changes.length?`<section class="evo-section"><h3>內容更新（${changes.length} 筆）</h3><div class="evo-change-grid">${changes.map(c=>`<div class="evo-change-item"><div class="evo-change-top"><span class="pill ${evoChangeTone[c.change_type]||'gray'}">${esc(c.change_label)}</span><span class="pill gray">${esc(c.group_title)}</span><span class="pill amber">${esc(c.status)}</span></div><h4><button type="button" class="logic-chip" data-jump="${esc(c.entity_id)}">↗ ${hl(c.title)}</button></h4><p class="evo-change-desc">${hl(c.description)}</p><p class="io-basis">修訂原因：${c.change_reason_basis==='source'?hl(c.change_reason):'<span class="logic-unknown">尚無紀錄</span>'} · 生效 ${esc(c.effective_at)} · 收錄 #${c.sequence} (${esc(c.recorded_at)})</p></div>`).join('')}</div></section>`:'')+
+      (snaps.length?`<section class="evo-section"><h3>架構紀錄（${snaps.length} 筆）</h3><div class="evo-chip-wrap">${snaps.map(s=>`<button type="button" class="logic-chip source-chip" data-evolution-source="${esc(s.source_record)}">📸 ${hl(s.title)}<small>${esc(s.captured_at)}</small></button>${s.captured_at&&s.captured_at!=='unknown'?`<button type="button" class="logic-chip" data-evo-asof="${esc(s.captured_at)}">⏳ 預覽此時間切面</button>`:''}`).join('')}</div></section>`:'')+
+      (evs.length?`<details class="logic-context-accordion evo-events-acc" ${!changes.length?'open':''}><summary>📂 相關紀錄（${evs.length} 筆對話／歷史事件 — 點擊展開或點選晶片檢視來源）</summary><div class="evo-event-list">${evs.map(e=>`<div class="evo-event-row"><button type="button" class="logic-chip source-chip" data-evolution-source="${esc(e.source_record)}">📄 ${esc(e.display_date)} · ${esc(e.evidence_type)}<small>${hl(e.title)}</small></button><p>${hl(e.summary)}</p></div>`).join('')}</div></details>`:'')+
       `</article>`;
   }
   function evoShiftCard(s){
@@ -786,8 +787,8 @@
     return `<article class="logic-card evo-shift-card" data-shift-card="${esc(s.id)}">`+
       `<div class="logic-card-heading"><div class="logic-card-meta"><span class="pill ${evoShiftTone[s.shift_type]||'blue'}">${esc(s.shift_label)}</span><span class="pill gray">${esc(s.group_title)}</span><span class="pill gray">${esc(scopeLabel(s))}</span><span class="pill blue">共 ${s.version_count} 版</span></div><h3>${hl(s.title)} <small class="evo-native-id">${esc(s.native_id)}</small></h3></div>`+
       `<div class="case-compare evo-compare">`+
-        `<section class="io-block evo-early"><h4>🕒 早期設計／首版記載（${esc(er.version_label)} · #${er.sequence}）</h4><p><span class="pill gray">狀態：${esc(er.status)}</span> <b>${hl(er.title)}</b></p><p>${hl(er.summary)}</p><small class="io-basis">生效：${esc(er.effective_at)} · 收錄：${esc(er.recorded_at)}</small></section>`+
-        `<section class="io-block evo-current"><h4>✨ 當前有效記載（${esc(cr.version_label)} · #${cr.sequence}）</h4><p><span class="pill amber">狀態：${esc(cr.status)}</span> <b>${hl(cr.title)}</b></p><p>${hl(cr.summary)}</p><small class="io-basis">生效：${esc(cr.effective_at)} · 收錄：${esc(cr.recorded_at)}</small></section>`+
+        `<section class="io-block evo-early"><h4>🕒 早期設計（${esc(er.version_label)} · #${er.sequence}）</h4><p><span class="pill gray">狀態：${esc(er.status)}</span> <b>${hl(er.title)}</b></p><p>${hl(er.summary)}</p><small class="io-basis">生效：${esc(er.effective_at)} · 收錄：${esc(er.recorded_at)}</small></section>`+
+        `<section class="io-block evo-current"><h4>✨ 目前設計（${esc(cr.version_label)} · #${cr.sequence}）</h4><p><span class="pill amber">狀態：${esc(cr.status)}</span> <b>${hl(cr.title)}</b></p><p>${hl(cr.summary)}</p><small class="io-basis">生效：${esc(cr.effective_at)} · 收錄：${esc(cr.recorded_at)}</small></section>`+
       `</div>`+
       `<div class="evo-reason-box"><b>🔀 轉折與修訂原因：</b>${s.change_reason_basis==='source'?hl(s.change_reason):'<span class="logic-unknown">來源未記載轉折原因（unknown）</span>'}</div>`+
       `<div class="logic-links"><button type="button" class="logic-chip" data-jump="${esc(s.entity_id)}">↗ 開啟五層詳情（${esc(s.title)}）</button>${evIds.slice(0,4).map(eid=>`<button type="button" class="logic-chip source-chip" data-evolution-source="development_events:${esc(eid)}">來源事件 ${esc(eid)}</button>`).join('')}</div>`+
@@ -799,9 +800,9 @@
     const isCur=cp.is_current_as_of||(currentAsOf&&cp.as_of===currentAsOf);
     return `<article class="logic-card evo-cp-card ${isCur?'active-cp':''}" data-cp-card="${esc(cp.id)}">`+
       `<div class="logic-card-heading"><div class="logic-card-meta"><span class="pill ${cp.kind==='architecture_snapshot'?'purple':'blue'}">${esc(cp.kind_label)}</span><span class="pill ${cp.included_in_current_slice?'green':'gray'}">${cp.included_in_current_slice?'✓ 包含於目前切面':'⏳ 晚於目前切面'}</span>${isCur?'<span class="pill amber">★ 目前所在 as_of 切面</span>':''}</div><h3>${hl(cp.display_time)} — ${hl(cp.title)}</h3></div>`+
-      `<p class="io-basis">ISO 時間錨點：<code>${esc(cp.as_of)}</code> · 對應架構快照：<code>${esc(cp.active_snapshot_id||'尚未建立快照')}</code></p>`+
-      `<div class="evo-cp-stats"><span>累計知識版本：<b>${cm.knowledge_version_count??0}</b></span><span>累計知識實體：<b>${cm.unique_entity_count??0}</b></span><span>累計架構快照：<b>${cm.snapshot_count??0}</b></span></div>`+
-      `<div class="logic-links"><button type="button" class="logic-chip ${isCur?'active-chip':''}" data-evo-asof="${esc(cp.as_of)}">${isCur?'✓ 目前檢視此切面':'⏳ 切換至此時間切面（as_of）'}</button>${cp.active_snapshot_id?`<button type="button" class="logic-chip source-chip" data-evolution-source="architecture_snapshots:${esc(cp.active_snapshot_id)}">查看快照來源紀錄 ↗</button>`:''}</div>`+
+      `<p class="io-basis">日期：<code>${esc(cp.as_of)}</code> · 對應架構快照：<code>${esc(cp.active_snapshot_id||'尚未建立快照')}</code></p>`+
+      `<div class="evo-cp-stats"><span>紀錄版本：<b>${cm.knowledge_version_count??0}</b></span><span>功能數量：<b>${cm.unique_entity_count??0}</b></span><span>架構版本：<b>${cm.snapshot_count??0}</b></span></div>`+
+      `<div class="logic-links"><button type="button" class="logic-chip ${isCur?'active-chip':''}" data-evo-asof="${esc(cp.as_of)}">${isCur?'✓ 正在查看這個版本':'⏳ 查看這個版本'}</button>${cp.active_snapshot_id?`<button type="button" class="logic-chip source-chip" data-evolution-source="architecture_snapshots:${esc(cp.active_snapshot_id)}">查看快照來源紀錄 ↗</button>`:''}</div>`+
       `</article>`;
   }
   function syncEvolutionDrawer(evo){
@@ -827,14 +828,14 @@
     if(!data)return;
     const evo=evoData();
     if(!evo){
-      $('#evolution-content').innerHTML='<div class="logic-empty"><h2>此版本的 API 尚未提供演進資料</h2><p>請重新整理頁面載入最新唯讀轉接資料。</p></div>';
+      $('#evolution-content').innerHTML='<div class="logic-empty"><h2>目前沒有開發歷程資料</h2><p>請重新整理。</p></div>';
       return;
     }
     const batches=filteredEvoBatches(evo),shifts=filteredEvoShifts(evo),cps=filteredEvoCheckpoints(evo);
     const tabLabels={
       timeline:`🕒 演進時間軸（${batches.length} 批）`,
-      shifts:`🔀 設計轉折與更迭（${shifts.length} 項）`,
-      checkpoints:`📸 快照與時間切面回溯（${cps.length} 點）`
+      shifts:`🔀 設計變更（${shifts.length} 項）`,
+      checkpoints:`📸 歷史版本（${cps.length} 點）`
     };
     document.querySelectorAll('[data-evo-view]').forEach(b=>{
       const v=b.dataset.evoView,act=v===evoView;
@@ -844,9 +845,9 @@
     const allCps=evo.all_checkpoints||evo.as_of_checkpoints||[];
     const sel=$('#evo-asof');
     if(sel){
-      sel.innerHTML='<option value="">最新狀態 Latest（全部記載）</option>'+allCps.map(c=>`<option value="${esc(c.as_of)}">[${esc(c.kind_label)}] ${esc(c.display_time)} · ${esc(c.title)}</option>`).join('');
+      sel.innerHTML='<option value="">最新狀態</option>'+allCps.map(c=>`<option value="${esc(c.as_of)}">[${esc(c.kind_label)}] ${esc(c.display_time)} · ${esc(c.title)}</option>`).join('');
       if(currentAsOf&&!allCps.some(c=>c.as_of===currentAsOf)){
-        sel.innerHTML+=`<option value="${esc(currentAsOf)}">[自訂切面] ${esc(currentAsOf)}</option>`;
+        sel.innerHTML+=`<option value="${esc(currentAsOf)}">[自選時間] ${esc(currentAsOf)}</option>`;
       }
       sel.value=currentAsOf||'';
     }
@@ -861,7 +862,7 @@
         sliceBanner.hidden=!isSliced;
         if(isSliced){
           const m=evo.summary_metrics||{};
-          sliceBanner.innerHTML=mobile()?`<span>⏳ 歷史預覽 · ${esc(currentAsOf.slice(0,10))}<small>僅顯示當時已知資料</small></span><button type="button" class="evo-reset-inline" data-reset-asof="1">↺ 返回最新</button>`:`<span>⏳ 目前正在檢視歷史時間切面：<b>${esc(currentAsOf)}</b>（僅呈現截至該時間點已記載的 ${m.knowledge_version_count??0} 筆知識版本、${m.visible_event_count??0} 筆來源事件與 ${m.snapshot_count??0} 個快照，未來變更已過濾）</span><button type="button" class="evo-reset-inline" data-reset-asof="1">↺ 一鍵回到最新狀態（Latest）</button>`;
+          sliceBanner.innerHTML=mobile()?`<span>⏳ 歷史預覽 · ${esc(currentAsOf.slice(0,10))}<small>僅顯示當時已知資料</small></span><button type="button" class="evo-reset-inline" data-reset-asof="1">↺ 返回最新</button>`:`<span>⏳ 查看過去版本：<b>${esc(currentAsOf)}</b>（只看當時已有的資料）</span><button type="button" class="evo-reset-inline" data-reset-asof="1">↺ 回到最新</button>`;
         }
       }
     }
@@ -878,17 +879,17 @@
       $('#evo-all').disabled=!batches.length;
       $('#evo-all').setAttribute('aria-pressed',evoAll);
       $('#evo-all').textContent=evoAll?'聚焦單一批次':'展開全部批次';
-      $('#evo-position').textContent=!batches.length?'0 / 0':evoAll?`全部 ${batches.length} 批`:`Batch ${evoIndex+1} / ${batches.length}`;
+      $('#evo-position').textContent=!batches.length?'0 / 0':evoAll?`全部 ${batches.length} 批`:`${evoIndex+1} / ${batches.length}`;
       $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${batches.length} 批符合`:'';
       rail.innerHTML=batches.map((b,i)=>`<div class="rail-entry"><button type="button" class="${b.is_exact_time?'documented':'partial'}" data-evo-batch="${i}" ${i===evoIndex&&!evoAll?'aria-current="step"':''} title="${esc(b.title)}"><span>${String(b.ordinal).padStart(2,'0')}</span><em><b>${esc(b.date_label)}</b> · ${hl(b.lead_title)}</em></button></div>`).join('');
       const shown=evoAll?batches:(batches[evoIndex]?[batches[evoIndex]]:[]);
       $('#evolution-content').innerHTML=evoMetricsStrip(evo)+(shown.length?shown.map(evoBatchCard).join(''):`<div class="logic-empty"><h2>此範圍或時間切面下沒有符合的演進批次</h2><p>請調整搜尋關鍵字、Agent 範圍或點選「回到最新狀態」。</p><button type="button" class="logic-reset-scope" data-reset-asof="1">↺ 回到最新狀態</button></div>`);
     }else if(evoView==='shifts'){
       $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${shifts.length} 項轉折符合`:'';
-      $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>設計轉折與跨版本演進對照（共 ${shifts.length} 項）</h2><p class="io-basis">對照早期設計（v1）與截至目前切面之最新有效記載；未記載轉折原因者誠實標示 unknown。</p></div>${shifts.length?shifts.map(evoShiftCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的設計轉折項目</h2></div>'}</section>`;
+      $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>設計改了什麼（共 ${shifts.length} 項）</h2><p class="io-basis">對照早期與目前的設計。</p></div>${shifts.length?shifts.map(evoShiftCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的設計轉折項目</h2></div>'}</section>`;
     }else{
       $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${cps.length} 個切面錨點符合`:'';
-      $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>快照與時間切面回溯（共 ${cps.length} 個可切換時間錨點）</h2><p class="io-basis">點選任一時間錨點可立即載入截至該時間點的完整架構、邏輯、演進與進度狀態；嚴格排除 public_poc 與無關自動圖譜快照。</p></div><div class="evo-cp-grid">${cps.length?cps.map(evoCheckpointCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的時間切面錨點</h2></div>'}</div></section>`;
+      $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>歷史版本（共 ${cps.length} 個可切換時間錨點）</h2><p class="io-basis">選擇日期查看當時的內容。</p></div><div class="evo-cp-grid">${cps.length?cps.map(evoCheckpointCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的時間切面錨點</h2></div>'}</div></section>`;
     }
     syncEvolutionDrawer(evo);
   }

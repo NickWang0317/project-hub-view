@@ -510,7 +510,25 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 .closure-item p{line-height:1.6;overflow-wrap:anywhere}
 .closure-item h3{margin:12px 0}
 .closure-item .pill{font-size:13px;padding:4px 9px}
-.closure-item .closure-item-open h3{font-size:20px;line-height:1.35;margin:12px 0 15px;font-weight:750}
+.closure-item .closure-card-fold h3{font-size:20px;line-height:1.35;margin:12px 0 6px;font-weight:750}
+.closure-card-fold>summary{display:flex;flex-direction:column;align-items:stretch;gap:3px;list-style:none;cursor:pointer;min-height:72px}
+.closure-card-fold>summary>.pill{align-self:flex-start;white-space:nowrap;max-width:100%;font-size:13px}
+.closure-card-fold>summary>h3{min-width:0;overflow-wrap:anywhere;margin:5px 0!important}
+.closure-card-fold>summary::-webkit-details-marker{display:none}
+.closure-card-fold>summary:focus-visible,.closure-review-fold>summary:focus-visible{outline:2px solid var(--green);outline-offset:5px;border-radius:8px}
+.closure-toggle{display:block;align-self:flex-end;text-align:right;color:var(--green);font-size:15px;font-weight:650}
+.closure-toggle::after{content:' ▾'}
+.closure-card-fold[open] .closure-toggle{font-size:0}
+.closure-card-fold[open] .closure-toggle::after{content:'收起 ▴';font-size:15px}
+.closure-card-content{border-top:1px solid var(--line);padding-top:10px}
+.closure-card-more{display:block;width:100%;min-height:44px;border:0;background:transparent;text-align:right;color:var(--muted);font-size:15px}
+.closure-review-fold{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.closure-review-fold>summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:700;color:var(--green)}
+.closure-review-fold>summary::-webkit-details-marker{display:none}
+.closure-review-fold>summary::after{content:'展開 ▾';font-size:14px}
+.closure-review-fold[open]>summary::after{content:'收起 ▴'}
+.closure-review-fold .closure-actions{padding-top:10px}
+.closure-review-fold>.closure-reopen{margin-top:12px}
 .closure-item .closure-line{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;margin:10px 0;font-size:16px;line-height:1.55;color:var(--ink);text-align:left;overflow-wrap:anywhere}
 .closure-line b{color:var(--green);font-size:16px;font-weight:700}
 .closure-line span{color:var(--ink)}
@@ -523,8 +541,6 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 #drawer:has(.closure-detail-text) details>summary{font-size:17px;line-height:1.55}
 #drawer .closure-detail-text{font-size:16px;line-height:1.65;color:var(--ink)}
 #drawer .closure-detail-text b{color:var(--green)}
-.closure-item-open{display:block;text-align:left;width:100%;border:0;background:transparent;padding:0;min-height:92px;color:inherit}
-.closure-item-open:hover{border:0}
 .closure-verify{width:100%;min-height:50px;margin-top:12px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 13%,var(--panel));color:var(--green);font-weight:700;font-size:17px}
 .closure-reopen{width:100%;min-height:50px;margin-top:12px;border-color:var(--amber);color:var(--amber);background:var(--panel);font-weight:600;font-size:17px}
 .mobile-review{padding:14px 0;max-width:100%;overflow-wrap:anywhere}
@@ -537,7 +553,7 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 #closure-review input:not([type=checkbox]),#closure-review textarea{display:block;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
 .closure-actions{display:flex;flex-wrap:wrap;gap:8px}
 .closure-actions button{min-height:44px;flex:1}
-@media(max-width:768px){.closure-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.closure-metrics .p-metric{min-width:0;min-height:90px}.closure-grid{grid-template-columns:1fr}.mobile-review .closure-actions{flex-direction:column}.mobile-review .closure-actions button{width:100%;min-height:52px}}
+@media(max-width:768px){.closure-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.closure-metrics .p-metric{min-width:0;min-height:90px}.closure-grid{grid-template-columns:1fr}.closure-review-fold .closure-actions{flex-direction:column}.closure-review-fold .closure-actions button{width:100%;min-height:52px}}
 
 /* 功能結案與架構模組摘要使用不同母體。 */
 body[data-view="progress"] #stats { display:none; }
@@ -546,7 +562,7 @@ body[data-view="progress"] #stats { display:none; }
   .workspace>nav button[data-view="progress"]{order:-1}
   .workspace>nav button[data-view="progress"] small{display:inline}
   .closure-item{padding:16px}
-  .closure-item .closure-item-open h3{font-size:21px}
+  .closure-item .closure-card-fold h3{font-size:21px}
   .closure-item .closure-line{font-size:17px;grid-template-columns:44px minmax(0,1fr);gap:9px}
   .closure-line b{font-size:17px}
   .closure-board-note{font-size:15px}
