@@ -512,6 +512,7 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 .closure-item-open{display:block;text-align:left;width:100%;border:0;background:transparent;padding:0;min-height:92px;color:inherit}
 .closure-item-open:hover{border:0}
 .closure-verify{width:100%;min-height:46px;margin-top:12px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 13%,var(--panel));color:var(--green);font-weight:700;font-size:15px}
+.closure-reopen{width:100%;min-height:48px;margin-top:12px;border-color:var(--amber);color:var(--amber);background:var(--panel);font-weight:600;font-size:15px}
 .mobile-review{padding:14px 0;max-width:100%;overflow-wrap:anywhere}
 .mobile-review p{font-size:14px;line-height:1.7;margin-bottom:15px}
 .mobile-review .closure-actions button{min-height:48px;font-weight:600}
@@ -526,3 +527,8 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 
 /* 功能結案與架構模組摘要使用不同母體。 */
 body[data-view="progress"] #stats { display:none; }
+/* 手機使用者以進度驗收為主：確保 Progress 不藏在水平捲動的最右側。 */
+@media(max-width:640px){
+  .workspace>nav button[data-view="progress"]{order:-1}
+  .workspace>nav button[data-view="progress"] small{display:inline}
+}
