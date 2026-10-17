@@ -172,7 +172,7 @@
       size:[370,1190],
       zones:[
         {x:10,y:10,w:350,h:118,tag:'STAGE 01 · 問題發現',title:''},
-        {x:10,y:140,w:350,h:642,tag:'STAGE 02 – 03 · 調查迴圈 INVESTIGATION LOOP',title:'左側虛線為迴圈軌道，資料不足或矛盾時回到 02 重查',tone:'loop'},
+        {x:10,y:140,w:350,h:642,tag:'STAGE 02 – 03 · 調查迴圈',title:'資料不足或矛盾，就回到 02 再查',tone:'loop'},
         {x:10,y:816,w:350,h:362,tag:'STAGE 04 · 摘要與下一步建議',title:'完成調查或達調查上限後整理交付',tone:'output'}
       ],
       boxes:{
@@ -187,7 +187,7 @@
         I:{x:24,y:1096,w:322,h:66,num:'09',title:'提出下一步建議',sub:'提供後續處理方向，由現場人員決定',variant:'outcome'}
       },
       wires:[
-        {d:'M270 112 V198',tone:'forward'},
+        {d:'M185 112 V124 Q185 130 191 130 H205 Q211 130 211 136 V198',tone:'forward'},
         {d:'M211 262 V288',tone:'forward'},
         {d:'M211 352 V378',tone:'forward'},
         {d:'M211 442 V468',tone:'forward'},
@@ -205,8 +205,8 @@
       size:[370,766],
       zones:[
         {x:10,y:10,w:350,h:204,tag:'STAGE 01 · 即時資料與異常偵測',title:''},
-        {x:10,y:226,w:350,h:304,tag:'STAGE 02 · 行動分流判斷',title:'依規則分流需處理或白名單項目',tone:'loop'},
-        {x:10,y:544,w:350,h:210,tag:'STAGE 03 · 畫面呈現與人工確認',title:'',tone:'output'}
+        {x:10,y:226,w:350,h:304,tag:'STAGE 02 · 決策分流',title:'判斷需不需要處理',tone:'loop'},
+        {x:10,y:544,w:350,h:210,tag:'STAGE 03 · 結果交付',title:'',tone:'output'}
       ],
       boxes:{
         A:{x:24,y:46,w:322,h:64,num:'01',title:'取得設備即時資料',sub:'接收機台目前的即時狀態',variant:'entry'},
@@ -219,11 +219,13 @@
       },
       wires:[
         {d:'M185 110 V134',tone:'forward'},
-        {d:'M284 198 V280',tone:'forward'},
-        {d:'M100 344 V410',tone:'ok',label:'✓ 需要處理',lx:100,ly:376,pw:104},
-        {d:'M270 344 V410',tone:'limit',label:'— 不需要處理',lx:270,ly:376,pw:116},
-        {d:'M100 500 V512 Q100 520 110 520 H276 Q284 520 284 528 V582',tone:'ok'},
-        {d:'M284 500 V582',tone:'limit'},
+        {d:'M185 198 V280',tone:'forward'},
+        {d:'M185 344 V364',tone:'forward',noArrow:true},
+        {d:'M185 364 H112 Q100 364 100 376 V410',tone:'ok',label:'✓ 需要處理',lx:100,ly:390,pw:104},
+        {d:'M185 364 H258 Q270 364 270 376 V410',tone:'limit',label:'— 不需要處理',lx:270,ly:390,pw:116},
+        {d:'M100 500 V518 Q100 530 112 530 H173 Q185 530 185 542',tone:'ok',noArrow:true},
+        {d:'M270 500 V518 Q270 530 258 530 H197 Q185 530 185 542',tone:'limit',noArrow:true},
+        {d:'M185 542 V582',tone:'forward'},
         {d:'M185 646 V672',tone:'ok'}
       ]
     }
@@ -300,7 +302,7 @@
       const pillY=w.ly?w.ly-pillH/2:0;
       const pillX=w.lx?w.lx-(w.pw||130)/2:0;
       return `<g class="arch-wire-group ${tone}">`+
-        `<path class="architecture-wire ${tone}" d="${w.d}" marker-end="${markerFor(tone)}"/>`+
+        `<path class="architecture-wire ${tone}" d="${w.d}"${w.noArrow?'':` marker-end="${markerFor(tone)}"`}/>`+
         (w.label?`<g class="architecture-branch ${tone}">`+
           `<rect x="${pillX}" y="${pillY}" width="${w.pw||130}" height="${pillH}" rx="${pillH/2}"/>`+
           `<text x="${w.lx}" y="${w.sub&&!isMobile?pillY+13:w.ly}" text-anchor="middle" dominant-baseline="central" class="branch-main">${svgEsc(w.label)}</text>`+
@@ -312,6 +314,8 @@
       const {x,y,w,h,num,title,sub,variant,badge,numTop}=b;
       const isOutcome=variant==='outcome';
       const badgeW=badge?badge.length*11+18:0;
+      // 手機版將角色膠囊放在卡片內，避免壓住上一行的 STAGE 說明。
+      const badgeY=isMobile?y+8:y-10;
       if(numTop){
         return `<g class="node ${variant||'step'} ${isOutcome?'outcome':''}" data-arch-node="${id}">`+
           `<rect class="node-card" x="${x}" y="${y}" width="${w}" height="${h}" rx="15"/>`+
@@ -327,7 +331,7 @@
         `<line class="node-highlight" x1="${x+14}" y1="${y+1}" x2="${x+w-14}" y2="${y+1}"/>`+
         `<rect class="node-num-bg" x="${x+12}" y="${y+13}" width="${num.length>2?36:28}" height="22" rx="7"/>`+
         `<text class="node-num" x="${x+12+(num.length>2?18:14)}" y="${y+24}" text-anchor="middle" dominant-baseline="central">${svgEsc(num)}</text>`+
-        (badge?`<rect class="node-role-pill" x="${x+w-badgeW-10}" y="${y-10}" width="${badgeW}" height="20" rx="10"/><text class="node-role-text" x="${x+w-badgeW/2-10}" y="${y}" text-anchor="middle" dominant-baseline="central">${svgEsc(badge)}</text>`:'')+
+        (badge?`<rect class="node-role-pill" x="${x+w-badgeW-10}" y="${badgeY}" width="${badgeW}" height="20" rx="10"/><text class="node-role-text" x="${x+w-badgeW/2-10}" y="${badgeY+10}" text-anchor="middle" dominant-baseline="central">${svgEsc(badge)}</text>`:'')+
         `<text class="node-title" x="${x+(num.length>2?56:48)}" y="${y+24}" dominant-baseline="central">${svgEsc(title)}</text>`+
         `<text class="node-sub" x="${x+14}" y="${y+51}" dominant-baseline="central">${svgEsc(sub||'')}</text>`+
       `</g>`;
