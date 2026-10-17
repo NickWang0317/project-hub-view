@@ -509,13 +509,20 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 .closure-item{text-align:left;color:var(--ink);min-width:0;cursor:pointer}
 .closure-item p{line-height:1.6;overflow-wrap:anywhere}
 .closure-item h3{margin:12px 0}
+.closure-item-open{display:block;text-align:left;width:100%;border:0;background:transparent;padding:0;min-height:92px;color:inherit}
+.closure-item-open:hover{border:0}
+.closure-verify{width:100%;min-height:46px;margin-top:12px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 13%,var(--panel));color:var(--green);font-weight:700;font-size:15px}
+.mobile-review{padding:14px 0;max-width:100%;overflow-wrap:anywhere}
+.mobile-review p{font-size:14px;line-height:1.7;margin-bottom:15px}
+.mobile-review .closure-actions button{min-height:48px;font-weight:600}
+.mobile-review .closure-actions button:first-child{border-color:var(--green);color:var(--green)}
 .closure-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 #closure-review{display:grid;gap:12px;padding:12px 0}
 #closure-review label{display:block;line-height:1.6}
 #closure-review input:not([type=checkbox]),#closure-review textarea{display:block;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
 .closure-actions{display:flex;flex-wrap:wrap;gap:8px}
 .closure-actions button{min-height:44px;flex:1}
-@media(max-width:768px){.closure-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.closure-metrics .p-metric{min-width:0;min-height:90px}.closure-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.closure-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.closure-metrics .p-metric{min-width:0;min-height:90px}.closure-grid{grid-template-columns:1fr}.mobile-review .closure-actions{flex-direction:column}.mobile-review .closure-actions button{width:100%;min-height:52px}}
 
 /* 功能結案與架構模組摘要使用不同母體。 */
 body[data-view="progress"] #stats { display:none; }

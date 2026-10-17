@@ -510,7 +510,7 @@
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     $('#progress-note').textContent=`共 ${all.length} 項功能 · 搜尋符合 ${matched.length} · 目前顯示 ${shown.length}`;
     const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong><small>${query()?`搜尋符合 ${matched.filter(i=>i.development_status===key).length} 項`:'點擊篩選 · 再點恢復全部'}</small></button>`).join('');
-    const rows=shown.map(i=>`<button class="p-card closure-item" data-closure-item="${esc(i.item_id)}"><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><h3>${hl(i.title)}</h3><p>${esc(i.decision_reason)}</p><small>${i.agent_scope==='shared'?'共用基底 · ':''}${esc(i.verification_level)} · 查看回報與歷史 ↗</small></button>`).join('');
+    const rows=shown.map(i=>`<article class="p-card closure-item"><button class="closure-item-open" data-closure-item="${esc(i.item_id)}"><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><h3>${hl(i.title)}</h3><p>${esc(i.decision_reason)}</p><small>${i.agent_scope==='shared'?'共用基底 · ':''}${esc(i.verification_level)} · 查看回報與歷史 ↗</small></button>${i.development_status==='NEEDS_USER_REVIEW'?`<button class="closure-verify" data-closure-verify="${esc(i.item_id)}">驗證此項 ↗</button>`:''}</article>`).join('');
     $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>開發交付 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><p class="io-basis">${esc(p.basis)}${readonly?' 線上／歷史版唯讀；人工驗收請回本機，不會寫入正式 DB。':' 人工驗收需本機金鑰登入，決定會保存至 SQLite。'}</p><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
   }
   function closureDetail(id,button){
@@ -519,7 +519,8 @@
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     const reports=(i.reports||[]).map(r=>`<article class="event"><h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p><small>${esc(r.display_date)} · ${esc(r.evidence_type)} · ${esc(r.version_scope)}</small><p>Commit：${esc(r.commit||'尚未取得')}</p><code>${esc(r.event_id)}</code><p>${esc(r.reason)}</p></article>`).join('')||'<p>尚未找到相關回報；線上版不公開私人來源。</p>';
     const history=(i.history||[]).map(h=>`<article class="event"><b>${esc(closureLabels[h.development_status])}</b><p>${esc(h.decision_reason)}</p><small>${esc(h.at)} · ${esc(h.actor)} · ${esc(h.action)}</small></article>`).join('');
-    const manual=i.development_status==='NEEDS_USER_REVIEW'?readonly?'<p class="logic-unknown">線上版唯讀。請在本機工作台登入後驗收；此處不會假裝寫入資料庫。</p>':`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`:'';
+    const mobileReview=window.__V2_STATIC_BUNDLE__? `<div class="mobile-review"><p><b>手機驗證（GitHub 帳號確認）</b>：下列操作會開啟 GitHub 的公開 Issue 編輯頁面；確認送出後，Mac 上的同步程序才會將決定寫入 SQLite 並更新網站。在同步前仍顯示「待我驗證」。請勿在公開 Issue 中填寫內部資料。</p><div class="closure-actions"><button type="button" data-review-remote="accept" data-review-id="${esc(i.item_id)}">通過・送出驗證</button><button type="button" data-review-remote="reject" data-review-id="${esc(i.item_id)}">需修正・送出</button><button type="button" data-review-remote="defer" data-review-id="${esc(i.item_id)}">暫緩・送出</button></div></div>`:'';
+    const manual=i.development_status==='NEEDS_USER_REVIEW'?(readonly?mobileReview:`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`):'';
     $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉抽屜</button><div class="eyebrow">DEVELOPMENT CLOSURE</div><h2>${esc(i.title)}</h2></div>`+
       step(1,'功能與結案範圍',`<p>${esc(i.acceptance_scope)}</p><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><p>${esc(i.decision_reason)}</p>`,true)+
       step(2,'完成回報與版本',reports)+step(3,'驗證與未解事項',`<p>驗證等級：${esc(i.verification_level)} · 結案依據：${esc(i.closure_basis||'尚未結案')}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p>${manual}`,i.development_status==='NEEDS_USER_REVIEW')+
@@ -528,8 +529,25 @@
     $('#drawer').classList.add('open');$('#drawer').classList.remove('auto-synced');$('#drawer').scrollTop=0;enhanceMobileDrawer();syncSheet();$('#close').focus();
   }
   document.addEventListener('click',e=>{
+    const verify=e.target.closest('[data-closure-verify]');if(verify){closureDetail(verify.dataset.closureVerify,verify);return;}
     const filter=e.target.closest('[data-closure-filter]');if(filter){closureFilter=closureFilter===filter.dataset.closureFilter?'all':filter.dataset.closureFilter;progressView='board';renderProgress();}
     const item=e.target.closest('[data-closure-item]');if(item)closureDetail(item.dataset.closureItem,item);
+  });
+  document.addEventListener('click',e=>{
+    const target=e.target.closest('[data-review-remote]');if(!target)return;
+    const item=closureData()?.items.find(i=>i.item_id===target.dataset.reviewId);
+    if(!window.__V2_STATIC_BUNDLE__||!item||item.development_status!=='NEEDS_USER_REVIEW')return;
+    const decision=target.dataset.reviewRemote;
+    if(!['accept','reject','defer'].includes(decision))return;
+    const label={accept:'通過',reject:'需修正',defer:'暫緩'}[decision];
+    if(!confirm(`已實際核對「${item.title}」的驗收範圍，確認送出「${label}」？下一步仍需在 GitHub 登入並提交 Issue，SQLite 不會立即改變。`))return;
+    const reason={accept:'本人已核對本項功能的公開驗收範圍，確認通過。',reject:'本人已核對本項功能，確認仍需修正；詳細內容留在本機。',defer:'本次暫緩確認，待進一步驗證。'}[decision];
+    const payload={schema:'pih-mobile-review-v1',item_id:item.item_id,expected_updated_at:item.updated_at,decision,reason};
+    const title=`[PIH-REVIEW] ${decision} ${item.item_id}`;
+    const body='<!-- pih-mobile-review-v1 -->\n```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n此 Issue 僅供手機人工驗收佇列使用。請勿加入私人或公司內部資料。';
+    const url=new URL('https://github.com/NickWang0317/project-hub-view/issues/new');
+    url.searchParams.set('title',title);url.searchParams.set('body',body);
+    window.open(url.toString(),'_blank','noopener,noreferrer');
   });
   document.addEventListener('submit',async e=>{
     if(e.target.id!=='closure-review')return;e.preventDefault();
