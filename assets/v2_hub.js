@@ -154,6 +154,7 @@
   function close(){selected=null;$('#drawer').classList.remove('open','auto-synced','sheet-full');$('#drawer').innerHTML='<div class="drawer-empty"><span>↗</span><h2>選取下一個模組</h2><p>沿著關係探索它的角色與來源。</p></div>';syncSheet();highlight();highlightLogicChips();highlightEvolutionChips();if(origin?.isConnected)origin.focus({preventScroll:true});}
   let knowledgeSnapshotPromise;
   async function workspaceKnowledge(){
+    if(window.__V2_STATIC_BUNDLE__)return {views:Object.fromEntries(Object.entries(window.__V2_STATIC_BUNDLE__.views).map(([scope,v])=>[scope,v.latest]))};
     if(!knowledgeSnapshotPromise)knowledgeSnapshotPromise=(async()=>{
       const element=$('#workspace-knowledge');if(!element)return null;
       const value=JSON.parse(element.textContent);
@@ -165,7 +166,7 @@
     return knowledgeSnapshotPromise;
   }
   window.ProjectKnowledgeSnapshot=workspaceKnowledge;
-  async function load(){const token=++request;$('#notice').textContent='正在讀取唯讀知識…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(!window.__V2_STATIC_BUNDLE__&&!currentAsOf&&localSnapshot){d=structuredClone((await workspaceKnowledge()).views[currentAgent]);}else if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'工作與學習紀錄 · 來源覆蓋：部分 · 核心成果不等於全面驗收';const m=d.provenance_manifest||{};$('#manifest').textContent=`快照 ${m.snapshot_captured_at||'尚未取得'} · ${m.event_count??0} 筆來源事件 · ${(m.knowledge_version_ids||[]).length} 個知識版本`;renderGraph();renderLogic();renderEvolution();renderProgress();}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
+  async function load(){const token=++request;$('#notice').textContent='正在讀取唯讀知識…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf&&window.__V2_STATIC_BUNDLE__.paths?.[currentAgent]?.[currentAsOf]){const response=await fetch(new URL(window.__V2_STATIC_BUNDLE__.paths[currentAgent][currentAsOf],document.baseURI));if(!response.ok)throw Error('歷史時間切面下載失敗');saved=await response.json();window.__V2_STATIC_BUNDLE__.views[currentAgent][currentAsOf]=saved;}if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'工作與學習紀錄 · 來源覆蓋：部分 · 核心成果不等於全面驗收';const m=d.provenance_manifest||{};$('#manifest').textContent=`快照 ${m.snapshot_captured_at||'尚未取得'} · ${m.event_count??0} 筆來源事件 · ${(m.knowledge_version_ids||[]).length} 個知識版本`;renderGraph();renderLogic();renderEvolution();renderProgress();if(!window.__V2_STATIC_BUNDLE__)refreshClosure().catch(()=>{});}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
   // ---- Agent Logic: manual Design Walkthrough (never a runtime trace; no timers, durations or autoplay). ----
   const DEFAULT_SYNTHETIC_NOTICE='目前沒有教學示例；不以合成內容混充真實證據';
   const logicData=()=>data?.agent_logic||{workflows:[],cases:[],synthetic_examples:[],query_abilities:[],synthetic_notice:DEFAULT_SYNTHETIC_NOTICE};
@@ -487,6 +488,61 @@
       `<section class="p-section"><details class="p-claims"><summary>缺少獨立驗證的宣告 · ${claims.length} 項（實作回報不等於已驗證）</summary>${claims.map(claimRow).join('')||emptyNote}</details></section>`,
       shown:issues.length+gaps.length+recs.length+claims.length};
   }
+  // 開發結案獨立於架構與驗證清單，統計僅使用持久化功能母體。
+  const closureLabels={CLOSED_REPORTED:'已結案',PENDING_REPORT:'待回報',NEEDS_USER_REVIEW:'待我驗證',NEEDS_FIX:'需修正'};
+  const closureTones={CLOSED_REPORTED:'green',PENDING_REPORT:'amber',NEEDS_USER_REVIEW:'amber',NEEDS_FIX:'red'};
+  let closureFilter='all',reviewAuthenticated=false,reviewEnabled=false;
+  const closureData=()=>data?.progress?.closure;
+  const closureMatch=i=>!query()||JSON.stringify([i.title,i.acceptance_scope,i.decision_reason]).toLowerCase().includes(query());
+  async function refreshClosure(){
+    if(window.__V2_STATIC_BUNDLE__||currentAsOf)return;
+    const scope=$('#agent').value;const token=request;
+    const r=await fetch('/api/progress?agent='+encodeURIComponent(scope));
+    if(!r.ok)return;
+    const v=await r.json();if(token!==request||scope!==$('#agent').value||currentAsOf)return;
+    if(data?.progress)data.progress.closure=v.closure;
+    reviewAuthenticated=v.authenticated;reviewEnabled=v.write_enabled;
+    if(viewName==='progress')renderProgress();
+  }
+  function closureBoard(){
+    const p=closureData(),all=p.items||[],matched=all.filter(closureMatch);
+    const shown=matched.filter(i=>closureFilter==='all'||i.development_status===closureFilter);
+    const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
+    $('#progress-note').textContent=`共 ${all.length} 項功能 · 搜尋符合 ${matched.length} · 目前顯示 ${shown.length}`;
+    const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong><small>${query()?`搜尋符合 ${matched.filter(i=>i.development_status===key).length} 項`:'點擊篩選 · 再點恢復全部'}</small></button>`).join('');
+    const rows=shown.map(i=>`<button class="p-card closure-item" data-closure-item="${esc(i.item_id)}"><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><h3>${hl(i.title)}</h3><p>${esc(i.decision_reason)}</p><small>${i.agent_scope==='shared'?'共用基底 · ':''}${esc(i.verification_level)} · 查看回報與歷史 ↗</small></button>`).join('');
+    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>開發交付 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><p class="io-basis">${esc(p.basis)}${readonly?' 線上／歷史版唯讀；人工驗收請回本機，不會寫入正式 DB。':' 人工驗收需本機金鑰登入，決定會保存至 SQLite。'}</p><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
+  }
+  function closureDetail(id,button){
+    const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
+    origin=button;selected=null;
+    const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
+    const reports=(i.reports||[]).map(r=>`<article class="event"><h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p><small>${esc(r.display_date)} · ${esc(r.evidence_type)} · ${esc(r.version_scope)}</small><p>Commit：${esc(r.commit||'尚未取得')}</p><code>${esc(r.event_id)}</code><p>${esc(r.reason)}</p></article>`).join('')||'<p>尚未找到相關回報；線上版不公開私人來源。</p>';
+    const history=(i.history||[]).map(h=>`<article class="event"><b>${esc(closureLabels[h.development_status])}</b><p>${esc(h.decision_reason)}</p><small>${esc(h.at)} · ${esc(h.actor)} · ${esc(h.action)}</small></article>`).join('');
+    const manual=i.development_status==='NEEDS_USER_REVIEW'?readonly?'<p class="logic-unknown">線上版唯讀。請在本機工作台登入後驗收；此處不會假裝寫入資料庫。</p>':`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`:'';
+    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉抽屜</button><div class="eyebrow">DEVELOPMENT CLOSURE</div><h2>${esc(i.title)}</h2></div>`+
+      step(1,'功能與結案範圍',`<p>${esc(i.acceptance_scope)}</p><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><p>${esc(i.decision_reason)}</p>`,true)+
+      step(2,'完成回報與版本',reports)+step(3,'驗證與未解事項',`<p>驗證等級：${esc(i.verification_level)} · 結案依據：${esc(i.closure_basis||'尚未結案')}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p>${manual}`,i.development_status==='NEEDS_USER_REVIEW')+
+      step(4,'驗收與狀態歷史',history||'<p>尚無人工驗收紀錄。</p>')+
+      step(5,'原有知識與證據入口',(i.entity_ids||[]).filter(id=>entity(id)).map(id=>`<button class="jump" data-jump="${esc(id)}">${esc(entity(id).title)} ↗</button>`).join('')||'<p>來源索引保留於本機稽核紀錄。</p>');
+    $('#drawer').classList.add('open');$('#drawer').classList.remove('auto-synced');$('#drawer').scrollTop=0;enhanceMobileDrawer();syncSheet();$('#close').focus();
+  }
+  document.addEventListener('click',e=>{
+    const filter=e.target.closest('[data-closure-filter]');if(filter){closureFilter=closureFilter===filter.dataset.closureFilter?'all':filter.dataset.closureFilter;progressView='board';renderProgress();}
+    const item=e.target.closest('[data-closure-item]');if(item)closureDetail(item.dataset.closureItem,item);
+  });
+  document.addEventListener('submit',async e=>{
+    if(e.target.id!=='closure-review')return;e.preventDefault();
+    const form=e.target,i=closureData()?.items.find(i=>i.item_id===form.dataset.item),message=$('#review-message');if(!i)return;
+    const fields=new FormData(form),decision=e.submitter?.value;const buttons=[...form.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
+    try{
+      const post=async(url,body)=>{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const v=await r.json();if(!r.ok)throw Error(v.error||'未能儲存');return v;};
+      if(!reviewAuthenticated){await post('/api/progress/login',{token:fields.get('token')});reviewAuthenticated=true;form.querySelector('[name=token]').value='';}
+      await post('/api/progress/decision',{item_id:i.item_id,decision,reason:fields.get('reason'),expected_updated_at:i.updated_at,request_id:crypto.randomUUID()});
+      await refreshClosure();closureDetail(i.item_id,origin);const note=document.createElement('p');note.setAttribute('role','status');note.textContent='已保存至本機 SQLite；重新整理後仍保留。';$('#drawer .drawer-head').append(note);
+    }catch(err){message.textContent='未儲存：'+err.message;buttons.forEach(b=>b.disabled=false);}
+  });
+
   function renderProgress(){
     if(!data)return;
     const p=progressData();
@@ -496,6 +552,7 @@
       $('#progress-content').innerHTML='<div class="logic-empty"><h2>此版本的 API 尚未提供進度資料</h2><p>前後端版本可能暫時不同步，請重新整理頁面。不會以其他資料推測進度。</p></div>';
       return;
     }
+    if(p.closure&&progressView==='board'){closureBoard();return;}
     const view=progressView==='skills'?skillsView(p):progressView==='gaps'?gapsView(p):boardView(p);
     const filterLabel=CARD_FILTERS[progressFilter]||'全部';
     if(view.shown===0){
@@ -506,7 +563,7 @@
       $('#progress-note').textContent='';
     }
     const top=$('#progress-content').scrollTop;
-    $('#progress-content').innerHTML=metricsStrip(p)+view.html;
+    $('#progress-content').innerHTML=(p.closure?'<p class="io-basis">以下是來源與驗證參考，不列入功能結案母體。請切回功能結案查看四項統計。</p>':metricsStrip(p))+view.html;
     $('#progress-content').scrollTop=top;
   }
   // 以來源紀錄開啟右側抽屜：事件型為「實體ID|事件ID」，資料表型為 source_refs 的鍵。
@@ -736,7 +793,7 @@
       history.replaceState(null,'',url);
     }
     if(name!=='thinking')$('#thinking-frame').contentWindow?.postMessage({type:'thinking-pause'},location.origin);
-    viewName=name;const ws=document.querySelector('.workspace');ws.dataset.view=name;
+    viewName=name;const ws=document.querySelector('.workspace');ws.dataset.view=name;document.body.dataset.view=name;
     const compact=true;
     document.body.classList.toggle('is-compact-header',compact);
     ws.classList.toggle('is-compact-header',compact);
@@ -765,7 +822,7 @@
     if(currentAsOf){
       let valid=true;
       if(window.__V2_STATIC_BUNDLE__){
-        valid=Boolean(window.__V2_STATIC_BUNDLE__.views?.[target]?.[currentAsOf]);
+        valid=Boolean(window.__V2_STATIC_BUNDLE__.views?.[target]?.[currentAsOf]||window.__V2_STATIC_BUNDLE__.paths?.[target]?.[currentAsOf]);
       }else if(data?.evolution){
         const cps=(data.evolution.all_checkpoints||data.evolution.as_of_checkpoints||[]).map(c=>c.as_of);
         valid=cps.includes(currentAsOf);
@@ -853,6 +910,7 @@
     if(el.id==='thumb-position'){$('#step-picker').hidden=!$('#step-picker').hidden;el.setAttribute('aria-expanded',String(!$('#step-picker').hidden));}
     if(el.id==='thumb-detail'){origin=el;const m=currentMaterial(),s=filteredSteps(m)[logicIndex]||m?.steps?.[logicIndex],id=s?.related_entity_ids?.find(id=>entity(id));if(id)openDetail(id);else if(s?.evidence_refs?.[0])sourceDrawer(s.evidence_refs[0],el);}
     if(el.id==='mobile-search-toggle'){const panel=$('#mobile-search');panel.hidden=!panel.hidden;el.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)$('#search').focus();}
+    if(el.dataset.metric!==undefined&&closureData()){closureFilter=['CLOSED_REPORTED','NEEDS_USER_REVIEW','NEEDS_FIX','PENDING_REPORT'][Number(el.dataset.metric)]||'all';progressView='board';view('progress');renderProgress();return;}
     if(el.dataset.metric!==undefined){const key=['evidence','pending','unresolved','next'][Number(el.dataset.metric)]||'all';progressView='board';progressFilter=key;view('progress');renderProgress();$('#progress-content').scrollTop=0;}
   });
   document.addEventListener('keydown',ev=>{
