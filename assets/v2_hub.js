@@ -491,9 +491,106 @@
   // 開發結案獨立於架構與驗證清單，統計僅使用持久化功能母體。
   const closureLabels={CLOSED_REPORTED:'已結案',PENDING_REPORT:'待回報',NEEDS_USER_REVIEW:'待我驗證',NEEDS_FIX:'需修正'};
   const closureTones={CLOSED_REPORTED:'green',PENDING_REPORT:'amber',NEEDS_USER_REVIEW:'amber',NEEDS_FIX:'red'};
+  // 由 2026-10-17 功能驗收紀錄整理：只有來源足夠清楚的項目才提供具體驗證步驟。
+  // 純呈現文字，不更改任何 SQLite 驗收狀態或結案依據。
+  const closureGuide={
+    'action.advice':{
+      title:'AI 能不能提出處理建議？',
+      purpose:'設備異常時，AI 提出下一步建議及原因。',
+      progress:'已有設計紀錄，尚未確認最新版是否正常運作。',
+      check:'查看實際異常案例，確認建議和原因是否合理。',
+      pass:'能看到具體的處理建議，以及提出建議的原因。'
+    },
+    'action.blind-test':{
+      title:'AI 能不能獨立分析現場異常？',
+      purpose:'讓 AI 分析事先不知道答案的異常案例。',
+      progress:'已有盲測需求，還缺最新版的實測回報。',
+      check:'用未提供答案的案例執行 AI，再核對它的結論。',
+      pass:'現場人員可以依實際資料核對分析結果與建議。'
+    },
+    'history.parity':{
+      title:'AI 的異常清單和 Dashboard 一樣嗎？',
+      purpose:'避免 AI 的異常清單漏掉或判錯項目。',
+      progress:'新模擬測試已有成果，舊差異尚未全部核對。',
+      check:'使用同一份資料，逐項比較 AI 與 Dashboard。',
+      pass:'先前的不一致案例都已確認修正，不能只比數量。'
+    },
+    'history.row-selection':{
+      title:'同一台設備多筆資料時，AI 有沒有選對？',
+      purpose:'設備有多筆紀錄時，正確判斷應採用的狀態。',
+      progress:'已發現可能選錯資料的風險，尚未確認實際出錯。',
+      check:'找一個同設備多筆紀錄的案例，核對取用結果。',
+      pass:'使用正確的資料列，不會因此判錯設備狀態。'
+    },
+    'history.trigger':{
+      title:'開啟 Dashboard，AI 會不會重複啟動？',
+      purpose:'開啟頁面時按規則啟動，避免無故重複執行。',
+      progress:'已確認需求是載入時啟動一次，尚待核對最新版。',
+      check:'開啟 Dashboard，核對執行與失敗重試紀錄。',
+      pass:'正常載入沒有多餘任務，失敗重試也符合規則。'
+    },
+    'history.old-tests':{
+      title:'以前測試失敗的問題修好了嗎？',
+      purpose:'確認舊測試失敗的問題在新版是否已解決。',
+      progress:'已有新測試結果，但舊失敗項目尚未逐項對齊。',
+      check:'逐項對照舊失敗測試與最新版的相同測試。',
+      pass:'每項舊問題都有對應的新結果，不能以總通過數代替。'
+    }
+  };
+  // 其他功能只解釋「用途」，不以用途描述代替完成證據。
+  const closurePurposes={
+    'snapshot':'讓 Dashboard 和 Agent 使用同一時間點的資料，避免比較錯誤。',
+    'action.entry':'開啟 Dashboard 時，讓 MVP Agent 依設定開始分析。',
+    'action.presentation':'把 AI 找到的異常與建議呈現在 Dashboard。',
+    'action.signals':'把同一個異常的多筆訊號整理在一起，避免重複提醒。',
+    'action.snapshot':'讓 MVP Agent 讀取 Dashboard 共用的即時資料。',
+    'action.whitelist':'限定 AI 不得自行執行未核准的操作。',
+    'history.analysis':'檢查 AI 分析的證據，不合規時重新修訂。',
+    'history.api':'讓前端能透過 API 取得 Agent 的分析結果。',
+    'history.briefing':'把分析結果整理成現場看得懂的摘要。',
+    'history.briefing-cap':'不要只因固定筆數上限而漏掉其他需要關注的事件。',
+    'history.candidate':'避免同一異常因時間或身分欄位重複被計算。',
+    'history.context':'把必要證據交給下一個分析步驟，減少無關資料。',
+    'history.core-migration':'整理 Agent 共用程式，減少對舊模組的依賴。',
+    'history.dashboard-backend':'讓 Dashboard 的部分判斷規則改由後端統一計算。',
+    'history.duration':'比較設備維修與改機的歷史耗時。',
+    'history.email':'產生主管摘要，並在核准後寄送。',
+    'history.frontend-mapping':'讓分析結果的欄位正確顯示在 Dashboard。',
+    'history.highlights':'從即時資料找出值得提醒的異常。',
+    'history.investigation.manpower':'針對人力負荷過高，進一步調查可能原因。',
+    'history.investigation.olp':'針對產線 OLP 偏低，進一步調查可能原因。',
+    'history.investigation.repair':'針對維修時間過長，進一步調查可能原因。',
+    'history.investigation.wait-change':'針對等待改機過久，進一步調查可能原因。',
+    'history.investigation.wait-repair':'針對等待維修過久，進一步調查可能原因。',
+    'history.normal-watch':'確認 AI 對正常或需關注的最終判斷一致。',
+    'history.olp-order':'確認直接查詢時，能選出正確的最新 OLP 紀錄。',
+    'history.olp-validator':'比對 OLP 最新值與歷史數值是否正確。',
+    'history.persistence':'將 Agent 分析結果保存到 Oracle，方便後續查詢。',
+    'history.presentation':'讓資料限制用清楚中文呈現，避免重複資訊。',
+    'history.repeat':'回查設備是否反覆維修，並分析歷史紀錄。',
+    'history.test-isolation':'讓測試執行時不干擾正式資料或其他測試。',
+    'history.worker-sse':'讓耗時分析在背景執行，並持續回報進度。'
+  };
+  const closureExplain=i=>{
+    const specific=closureGuide[i.item_id];
+    const status=i.development_status;
+    const manuallyAccepted=status==='CLOSED_REPORTED'&&i.closure_basis==='user_acceptance';
+    const progress=manuallyAccepted?'這項功能已由你人工確認通過。':
+      status==='CLOSED_REPORTED'?'已收到完成回報，但不代表你已親自測試。':
+      status==='PENDING_REPORT'?'尚缺這項功能的完成回報。':
+      status==='NEEDS_FIX'?'已有尚未解除的問題，需先修正。':
+      '目前資料不足，還不能確認最新版是否完成。';
+    const check=status==='CLOSED_REPORTED'?'可查看完成紀錄；若是誤按通過，可重新等待驗證。':
+      status==='PENDING_REPORT'?'先補齊完成回報，再確認是否需要驗證。':
+      status==='NEEDS_FIX'?'先確認問題修正與重新測試的結果。':
+      '先請開發者提供實際案例與驗證步驟，再決定是否通過。';
+    // 狀態可能在手機驗證後改變；絕不能保留過期的「尚未確認」文字。
+    if(specific)return status==='NEEDS_USER_REVIEW'?specific:{...specific,progress,check};
+    return {title:i.title,purpose:closurePurposes[i.item_id]||i.public_summary||i.title,progress,check,pass:'請依功能範圍與實際測試證據確認；目前沒有足夠資料列出更具體的通過條件。'};
+  };
   let closureFilter='all',reviewAuthenticated=false,reviewEnabled=false;
   const closureData=()=>data?.progress?.closure;
-  const closureMatch=i=>!query()||JSON.stringify([i.title,i.acceptance_scope,i.decision_reason]).toLowerCase().includes(query());
+  const closureMatch=i=>!query()||JSON.stringify([i.title,i.acceptance_scope,i.decision_reason,closureExplain(i)]).toLowerCase().includes(query());
   // 只顯示可撤銷的人工作業；機器判斷的結案與未解問題不允許一鍵覆蓋。
   const canReopen=i=>i&&['CLOSED_REPORTED','NEEDS_FIX'].includes(i.development_status)&&['accept','reject'].includes(i.manual_decision)&&['user_acceptance','user_review'].includes(i.closure_basis);
   async function refreshClosure(){
@@ -512,20 +609,36 @@
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     $('#progress-note').textContent=`共 ${all.length} 項功能 · 搜尋符合 ${matched.length} · 目前顯示 ${shown.length}`;
     const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong><small>${query()?`搜尋符合 ${matched.filter(i=>i.development_status===key).length} 項`:'點擊篩選 · 再點恢復全部'}</small></button>`).join('');
-    const rows=shown.map(i=>`<article class="p-card closure-item"><button class="closure-item-open" data-closure-item="${esc(i.item_id)}"><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><h3>${hl(i.title)}</h3><p>${esc(i.decision_reason)}</p><small>${i.agent_scope==='shared'?'共用基底 · ':''}${esc(i.verification_level)} · 查看回報與歷史 ↗</small></button>${i.development_status==='NEEDS_USER_REVIEW'?`<button class="closure-verify" data-closure-verify="${esc(i.item_id)}">驗證此項 ↗</button>`:canReopen(i)?`<button class="closure-reopen" data-closure-verify="${esc(i.item_id)}">↶ 重新等待驗證</button>`:''}</article>`).join('');
-    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>開發交付 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><p class="io-basis">${esc(p.basis)}${readonly?' GitHub Pages 可送出手機驗收 Issue，由 Mac 同步後更新 SQLite；未同步前仍顯示原狀態。':' 人工驗收需本機金鑰登入，決定會保存至 SQLite。'}</p><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
+    const rows=shown.map(i=>{
+      const guide=closureExplain(i);
+      return `<article class="p-card closure-item">
+        <button class="closure-item-open" data-closure-item="${esc(i.item_id)}">
+          <span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span>
+          <h3>${esc(guide.title)}</h3>
+          <p class="closure-line"><b>功能</b><span>${esc(guide.purpose)}</span></p>
+          <p class="closure-line"><b>進度</b><span>${esc(guide.progress)}</span></p>
+          <p class="closure-line"><b>驗證</b><span>${esc(guide.check)}</span></p>
+          <span class="closure-more">查看說明與紀錄 ↗</span>
+        </button>
+        ${i.development_status==='NEEDS_USER_REVIEW'?`<button class="closure-verify" data-closure-verify="${esc(i.item_id)}">驗證此項 ↗</button>`:canReopen(i)?`<button class="closure-reopen" data-closure-verify="${esc(i.item_id)}">↶ 重新等待驗證</button>`:''}
+      </article>`;
+    }).join('');
+    const delivery=readonly?'手機送出驗證後，等待 Mac 同步才會更新狀態。':'驗證決定會寫入本機 SQLite。';
+    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><p class="closure-board-note">${delivery}</p><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
   }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
     origin=button;selected=null;
+    const guide=closureExplain(i);
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     const reports=(i.reports||[]).map(r=>`<article class="event"><h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p><small>${esc(r.display_date)} · ${esc(r.evidence_type)} · ${esc(r.version_scope)}</small><p>Commit：${esc(r.commit||'尚未取得')}</p><code>${esc(r.event_id)}</code><p>${esc(r.reason)}</p></article>`).join('')||'<p>尚未找到相關回報；線上版不公開私人來源。</p>';
     const history=(i.history||[]).map(h=>`<article class="event"><b>${esc(closureLabels[h.development_status])}</b><p>${esc(h.decision_reason)}</p><small>${esc(h.at)} · ${esc(h.actor)} · ${esc(h.action)}</small></article>`).join('');
     const mobileReview=window.__V2_STATIC_BUNDLE__? `<div class="mobile-review"><p><b>手機驗證（GitHub 帳號確認）</b>：下列操作會開啟 GitHub 的公開 Issue 編輯頁面；確認送出後，Mac 上的同步程序才會將決定寫入 SQLite 並更新網站。在同步前仍顯示「待我驗證」。請勿在公開 Issue 中填寫內部資料。</p><div class="closure-actions"><button type="button" data-review-remote="accept" data-review-id="${esc(i.item_id)}">通過・送出驗證</button><button type="button" data-review-remote="reject" data-review-id="${esc(i.item_id)}">需修正・送出</button><button type="button" data-review-remote="defer" data-review-id="${esc(i.item_id)}">暫緩・送出</button></div></div>`:'';
     const manual=i.development_status==='NEEDS_USER_REVIEW'?(readonly?mobileReview:`<form id="closure-review" data-item="${esc(i.item_id)}"><p><b>驗收範圍</b>：${esc(i.acceptance_scope)}</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" placeholder="由本機管理者提供" required></label>`}<label>判斷理由<textarea name="reason" maxlength="2000" required placeholder="請說明已確認的功能或仍需修正的範圍"></textarea></label><label><input type="checkbox" name="confirm" required>我已核對上述功能及範圍</label><div class="closure-actions"><button name="decision" value="accept">確認通過・結案</button><button name="decision" value="reject">仍需修正</button><button name="decision" value="defer">暫不決定</button></div><p id="review-message" role="status"></p></form>`):canReopen(i)?(readonly?(window.__V2_STATIC_BUNDLE__?`<div class="mobile-review"><p>撤銷前一次人工驗收，回到「待我驗證」。GitHub Issue 送出後仍須等待 Mac 同步；如果前一次驗證剛送出但尚未同步，請先關閉誤送的 GitHub Issue，避免版本衝突。</p><button class="closure-reopen" data-review-remote="reopen" data-review-id="${esc(i.item_id)}">↶ 重新等待驗證・送出</button></div>`:'<p>歷史切面唯讀，請回到最新狀態後操作。</p>'):`<form id="closure-review" data-item="${esc(i.item_id)}"><p>這會撤銷前一次人工決定，回到「待我驗證」。原本的驗收歷史仍會保留。</p>${reviewAuthenticated?'':`<label>本機驗收金鑰<input name="token" type="password" autocomplete="off" required></label>`}<label>撤銷原因<textarea name="reason" maxlength="2000" required>前次人工驗收按錯，重新等待驗證。</textarea></label><label><input type="checkbox" name="confirm" required>確認將狀態改回待我驗證</label><button class="closure-reopen" name="decision" value="reopen">↶ 重新等待驗證</button><p id="review-message" role="status"></p></form>`):'';
-    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉抽屜</button><div class="eyebrow">DEVELOPMENT CLOSURE</div><h2>${esc(i.title)}</h2></div>`+
-      step(1,'功能與結案範圍',`<p>${esc(i.acceptance_scope)}</p><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><p>${esc(i.decision_reason)}</p>`,true)+
-      step(2,'完成回報與版本',reports)+step(3,'驗證與未解事項',`<p>驗證等級：${esc(i.verification_level)} · 結案依據：${esc(i.closure_basis||'尚未結案')}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p>${manual}`,i.development_status==='NEEDS_USER_REVIEW'||canReopen(i))+
+    $('#drawer').innerHTML=`<div class="drawer-head"><button id="close">✕ 關閉抽屜</button><div class="eyebrow">功能驗收</div><h2>${esc(guide.title)}</h2></div>`+
+      step(1,'這項功能要做什麼？',`<p class="closure-detail-text">${esc(guide.purpose)}</p><span class="pill ${closureTones[i.development_status]}">${closureLabels[i.development_status]}</span><p class="closure-detail-text">${esc(guide.progress)}</p>`,true)+
+      step(2,'我需要確認什麼？',`<p class="closure-detail-text">${esc(guide.check)}</p><p class="closure-detail-text"><b>通過條件：</b>${esc(guide.pass)}</p>${manual}`,i.development_status==='NEEDS_USER_REVIEW'||canReopen(i))+
+      step(3,'原始回報與限制',`<p>${esc(i.acceptance_scope)}</p><p>${esc(i.decision_reason)}</p><p>${esc(i.remaining_validation||'尚未取得進一步回報')}</p><p>驗證等級：${esc(i.verification_level)} · 結案依據：${esc(i.closure_basis||'尚未結案')}</p>${reports}`)+
       step(4,'驗收與狀態歷史',history||'<p>尚無人工驗收紀錄。</p>')+
       step(5,'原有知識與證據入口',(i.entity_ids||[]).filter(id=>entity(id)).map(id=>`<button class="jump" data-jump="${esc(id)}">${esc(entity(id).title)} ↗</button>`).join('')||'<p>來源索引保留於本機稽核紀錄。</p>');
     $('#drawer').classList.add('open');$('#drawer').classList.remove('auto-synced');$('#drawer').scrollTop=0;enhanceMobileDrawer();syncSheet();$('#close').focus();
