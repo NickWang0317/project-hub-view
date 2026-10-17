@@ -18,6 +18,29 @@ main{flex:1;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
 .graph-foot{padding:8px 14px}
 #canvas{flex:1;min-height:0;height:auto;overflow:auto}
 #graph{height:100%;min-height:0}
+/* Mermaid SVG 依原生 viewBox 縮放，取代舊 SVG 手算定位。 */
+#canvas{touch-action:pan-x pan-y}
+#graph{display:block;position:relative;min-height:0;height:auto;margin:0 auto}
+#graph svg{display:block;width:100%;height:100%;max-width:none!important;min-height:0!important}
+#graph g.node[role="button"],#graph path.flowchart-link[role="button"]{cursor:pointer;outline-offset:4px}
+#graph g.node[role="button"]:hover rect,#graph g.node[role="button"]:focus rect,
+#graph g.node[role="button"].selected rect{stroke:var(--green)!important;stroke-width:3px!important}
+#graph path.flowchart-link[role="button"]:hover,#graph path.flowchart-link[role="button"].selected{stroke:var(--green)!important;stroke-width:3px!important}
+#graph-relations{border:0;padding:0;margin-top:3px;font-size:12px}
+#graph-relations summary{display:inline-flex;align-items:center;min-height:30px;color:var(--green);font-size:12px}
+#graph-relations-list{display:flex;flex-wrap:wrap;gap:5px;padding:4px 0 8px}
+#graph-relations-list button{font-size:12px;text-align:left;max-width:100%;white-space:normal}
+.workspace[data-view="architecture"] .context{display:none}
+.workspace[data-view="architecture"] #notice{display:none!important}
+.workspace[data-view="architecture"] main:has(#drawer:not(.open)){grid-template-columns:minmax(0,1fr)}
+.workspace[data-view="architecture"] #drawer:not(.open){display:none}
+@media(max-width:640px){
+ .workspace[data-view="architecture"] #canvas{flex:none;height:min(57dvh,490px);min-height:300px;max-height:57dvh;overflow:auto}
+ .workspace[data-view="architecture"] .graph-panel{min-height:0}
+ .workspace[data-view="architecture"] #graph{margin:10px auto}
+ .workspace[data-view="architecture"] .graph-foot{padding:6px 12px;font-size:12px}
+ .workspace[data-view="architecture"] .legend{gap:7px;font-size:10px}
+}
 #group-list{flex:1;min-height:0;max-height:none;overflow:auto}
 aside{height:100%;min-height:0;max-height:none;overflow-y:auto}
 #placeholder{flex:1;min-height:0;overflow-y:auto;padding:24px}
@@ -423,7 +446,6 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
  #lock-workspace::after{content:'🔒';font-size:18px}
  .mobile-tools{display:flex;order:2;align-items:center;gap:2px;min-width:0}
  #mobile-scope{display:none!important}
- #mobile-search-toggle{width:44px;min-width:44px;padding:0;font-size:25px}
  .workspace>nav,.is-compact-header>nav{position:sticky;top:0;z-index:10;background:var(--bg);padding:0;min-height:44px;gap:4px;flex-shrink:0}
  .workspace>nav button{min-height:44px;padding:0 12px;font-size:13px;border-radius:0}
  .workspace>nav button[aria-current]{box-shadow:inset 0 -3px var(--green)}
@@ -434,8 +456,6 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
  .workspace[data-view="architecture"]>.stats,.workspace:not([data-view])>.stats{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:6px;margin:4px 0 6px;padding:0;min-height:44px;scrollbar-width:none}
  .stats::-webkit-scrollbar{display:none}.stat{flex:none;min-height:44px;padding:4px 10px;gap:6px;border-radius:999px;cursor:pointer}.stat span,.workspace[data-view="architecture"] .stat span{font-size:12px}.stat strong,.workspace[data-view="architecture"] .stat strong{font-size:17px}
  .mobile-only:not([hidden]){display:flex}
- #mobile-search{position:fixed;top:52px;left:8px;right:8px;z-index:40;padding:10px;background:var(--panel);border:1px solid var(--green);border-radius:12px;box-shadow:0 12px 30px var(--tone-0008)}
- #mobile-search label{width:100%;font-size:12px}
  input,select{font-size:16px;min-height:44px}
  button,summary,a.jump,.logic-chip,.source-chip,.p-chip,.version-switch a{min-width:44px;min-height:44px}
  button:disabled{opacity:.45}
@@ -505,6 +525,263 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 @media(max-width:768px){.workspace[data-view="thinking"] #thinking-panel{min-height:0}.workspace[data-view="thinking"]>nav{flex-wrap:nowrap;overflow-x:auto}.workspace[data-view="thinking"]>nav button{flex-shrink:0}}
 
 /* 功能結案專用樣式；不改動其他視角。 */
+/* 運作流程：一眼看完，不要求使用者逐步切換；技術與證據保留於收合區。 */
+.workspace[data-view="logic"] .logic-banner,
+.workspace[data-view="logic"] .logic-selects,
+.workspace[data-view="logic"] .logic-navigation,
+.workspace[data-view="logic"] #logic-rail{display:none!important}
+.workspace[data-view="logic"] .logic-tracks[hidden]{display:none!important}
+.workspace[data-view="logic"] .logic-controls{border:0;padding:10px 14px!important}
+.workspace[data-view="logic"] .logic-tracks{gap:8px}
+.workspace[data-view="logic"] .logic-tracks button{padding:9px 17px;min-height:42px;font-size:14px}
+.workspace[data-view="logic"] .logic-body{display:flex;flex-direction:column;flex:1;min-height:0}
+.workspace[data-view="logic"] #logic-content{flex:1;width:100%;padding:16px clamp(14px,3vw,42px)}
+.workspace[data-view="logic"] main:has(#drawer:not(.open)){grid-template-columns:minmax(0,1fr)}
+.workspace[data-view="logic"] #drawer:not(.open){display:none}
+.workspace[data-view="logic"] .context>div:first-child{display:none}
+.workspace[data-view="logic"] .context{justify-content:flex-end;padding:3px 0}
+.workspace[data-view="logic"] .controls{max-width:320px}
+body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:none!important}
+.story-page{max-width:1300px;margin:auto}
+.flow-workspace{display:grid;grid-template-columns:minmax(325px,.9fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.flow-map,.flow-desktop-inspector{border:1px solid var(--line);border-radius:14px;background:var(--bg);min-width:0}
+.flow-map{padding:17px 18px}
+.flow-map-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+.flow-map-heading b{font-size:16px}.flow-map-heading small{font-size:12px}
+.flow-nodes{display:flex;flex-direction:column;gap:14px;position:relative}
+.flow-node-wrap{position:relative;min-width:0}
+.flow-node-wrap:not(:last-child)::after{content:"↓";position:absolute;z-index:1;bottom:-18px;left:21px;color:var(--green);font-size:16px;font-weight:bold}
+.flow-node{width:100%;display:flex;gap:13px;align-items:center;text-align:left;padding:9px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:60px;transition:border-color .12s,background-color .12s}
+.flow-node:hover,.flow-node:focus-visible{border-color:var(--green)}
+.flow-node.is-selected{background:var(--tone-67dbb01f);border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.flow-node-number{font-size:14px;color:var(--green);font-weight:750;flex:none;width:32px;height:32px;border:1px solid var(--green);border-radius:50%;display:grid;place-items:center}
+.flow-node-title{font-size:16px;font-weight:600;line-height:1.45;flex:1;min-width:0}
+.flow-node-caret{color:var(--green);font-size:21px;flex:none}
+.flow-desktop-inspector{position:sticky;top:0;min-height:270px;padding:22px 23px}
+.flow-detail-kicker{font-size:13px;color:var(--green);font-weight:650;letter-spacing:.4px;margin-bottom:10px}
+.flow-detail-inner h3{font-size:24px;line-height:1.4;margin:0 0 16px}
+.flow-detail-lead{font-size:17px;line-height:1.8;color:var(--ink);white-space:pre-wrap;margin:0 0 18px}
+.flow-detail-note{font-size:13px;color:var(--muted);line-height:1.7;padding:11px 12px;background:var(--panel);border-radius:8px;border-left:2px solid var(--amber);margin-bottom:8px}
+.flow-neighbors{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:13px;margin-top:15px}
+.flow-neighbors button{color:var(--green);font-size:12px;flex:1;min-width:0;padding:8px;line-height:1.5;white-space:normal}
+.flow-neighbors span{font-size:12px;color:var(--muted)}
+.flow-mobile-inspector{display:none}
+.story-page .story-unknown{margin-left:0;margin-top:15px}
+.story-page .story-more{max-width:none}
+.flow-extras{display:flex;gap:10px;align-items:flex-start;margin-top:10px;min-width:0}
+.flow-extras>details{flex:1 1 0;min-width:0;margin:0!important;padding:0!important;background:var(--panel);border:1px solid var(--line);border-radius:9px}
+.flow-extras>details>summary{display:flex;min-height:42px;align-items:center;padding:8px 11px;font-size:13px;color:var(--green);list-style:none}
+.flow-extras>details>summary::-webkit-details-marker{display:none}
+.flow-extras>details[open]>summary{border-bottom:1px solid var(--line)}
+.flow-extras .story-unknown-body{padding:12px}
+.flow-extras .story-unknown-body p{margin:0 0 7px;font-size:13px;line-height:1.6}
+.flow-extras .story-more label,.flow-extras .story-case-body{padding:10px;display:block}
+/* 單頁桌面流程：固定在一個視窗內，不讓底部節點越界；窄高視窗保留內容區捲動。 */
+@media(min-width:901px){
+ body[data-view="logic"]{overflow:hidden}
+ .workspace[data-view="logic"]{height:100dvh;display:flex;flex-direction:column}
+ .workspace[data-view="logic"] .context{display:none}
+ .workspace[data-view="logic"] main{flex:1 1 auto;min-height:0;display:grid;align-items:stretch}
+ .workspace[data-view="logic"] #logic-panel{height:100%;min-height:0;overflow:hidden}
+ .workspace[data-view="logic"] .logic-body{min-height:0}
+ .workspace[data-view="logic"] #logic-content{min-height:0;overflow-y:auto;padding:10px 16px}
+ .workspace[data-view="logic"] .story-intro{margin-bottom:10px}
+ .workspace[data-view="logic"] .story-intro h2{font-size:21px;margin-bottom:2px}
+ .workspace[data-view="logic"] .story-intro p{font-size:12px;line-height:1.35}
+ .workspace[data-view="logic"] .flow-map{padding:10px 12px}
+ .workspace[data-view="logic"] .flow-map-heading{margin-bottom:8px}
+ .workspace[data-view="logic"] .flow-nodes{gap:clamp(4px,.75dvh,9px)}
+ .workspace[data-view="logic"] .flow-node{min-height:clamp(39px,calc((100dvh - 490px)/7),53px);padding:5px 10px}
+ .workspace[data-view="logic"] .flow-node-title{font-size:14px}
+ .workspace[data-view="logic"] .flow-node-number{width:27px;height:27px;font-size:12px}
+ .workspace[data-view="logic"] .flow-node-wrap:not(:last-child)::after{bottom:-14px;left:14px;font-size:14px}
+ .workspace[data-view="logic"] .flow-desktop-inspector{padding:15px 18px}
+ .workspace[data-view="logic"] .flow-detail-inner h3{font-size:21px;margin-bottom:9px}
+ .workspace[data-view="logic"] .flow-detail-lead{font-size:15px;line-height:1.65;margin-bottom:10px}
+ .workspace[data-view="logic"] .flow-detail-note{padding:8px 10px;font-size:12px}
+ .workspace[data-view="logic"] .flow-neighbors{margin-top:7px;padding-top:8px}
+}
+@media(max-width:900px){
+ .flow-workspace{grid-template-columns:minmax(0,1fr)}
+ .flow-extras{flex-direction:column}
+ .flow-extras>details{flex:none;width:100%}
+ .flow-desktop-inspector{display:none}
+ .flow-map{padding:11px}
+ .flow-node-wrap:not(:last-child)::after{left:21px}
+ .flow-node{min-height:62px}
+ .flow-mobile-inspector.is-selected:not([hidden]){display:block;border:1px solid var(--green);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);padding:14px 15px 16px}
+ .flow-node:has(+ .flow-mobile-inspector:not([hidden])){border-radius:10px 10px 0 0}
+ .flow-mobile-inspector .flow-detail-kicker,.flow-mobile-inspector .flow-detail-inner h3,.flow-mobile-inspector .flow-detail-note{display:none}
+ .flow-mobile-inspector .flow-detail-lead{margin:0 0 9px}
+ .flow-detail-inner h3{font-size:20px}
+ .flow-detail-lead{font-size:15px;line-height:1.7}
+ .flow-detail-note{font-size:12px}
+}
+@media(max-width:640px){
+ .workspace[data-view="logic"] #logic-content{padding:8px 7px}
+ .workspace[data-view="logic"] .story-intro{margin-bottom:9px}
+ .workspace[data-view="logic"] .story-intro h2{font-size:19px;margin-bottom:2px}
+ .workspace[data-view="logic"] .story-intro p{font-size:12px;line-height:1.4}
+ .flow-map{padding:8px}
+ .flow-nodes{gap:7px}
+ .flow-node{min-height:46px;padding:5px 9px}
+ .flow-node-wrap:not(:last-child)::after{bottom:-11px;font-size:12px}
+ .flow-map-heading{margin:0 0 10px}
+ .flow-map-heading b{font-size:15px}
+ .flow-node-title{font-size:15px}
+ .flow-node{padding:10px}
+ .flow-node-number{width:30px;height:30px}
+ .flow-node-wrap:not(:last-child)::after{left:19px}
+ .flow-mobile-inspector.is-selected:not([hidden]){padding:13px}
+ .flow-neighbors{flex-direction:column;align-items:stretch}
+ .flow-neighbors button{width:100%;text-align:center}
+}
+.workspace[data-view="logic"] .story-intro{display:block;height:auto;min-height:0;max-height:none;border:0;align-items:initial;padding:0;margin:0 0 24px}
+.story-intro h2{font-size:25px;margin:0 0 7px;line-height:1.35}
+.story-intro p{font-size:14px;color:var(--muted);line-height:1.6;max-width:750px}
+.story-steps{position:relative;display:flex;flex-direction:column;gap:10px}
+.story-steps::before{content:"";position:absolute;top:24px;bottom:24px;left:22px;border-left:2px solid var(--line)}
+.story-step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;position:relative;align-items:start}
+.story-step-number{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--panel);color:var(--green);border:2px solid var(--green);font-size:17px;font-weight:750;z-index:1}
+.story-step-main{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:15px 18px;min-width:0}
+.story-step h3{font-size:19px;margin:0 0 6px;line-height:1.45;color:var(--ink)}
+.story-step-main>p{font-size:15px;line-height:1.7;margin:0;overflow-wrap:anywhere}
+.story-tech{padding:0!important;border:0;margin-top:9px}
+.story-tech>summary{list-style:none;font-size:13px;color:var(--green);display:inline-flex;align-items:center;min-height:38px;padding:2px 0;cursor:pointer}
+.story-tech>summary::-webkit-details-marker{display:none}
+.story-tech>summary::after{content:" ▾";margin-left:4px}
+.story-tech[open]>summary::after{content:" ▴"}
+.story-tech-body .logic-card{margin-top:8px;margin-bottom:0;background:var(--panel)}
+.story-tech-body .logic-card-heading{margin-bottom:8px}
+.story-unknown{margin:18px 0 0 58px;padding:15px 18px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:9px}
+.story-unknown h3{font-size:16px;color:var(--amber);margin:0 0 6px}
+.story-unknown p{font-size:14px;line-height:1.6;margin:0}
+.story-more{padding:12px 0!important;max-width:950px;margin:8px auto;border-color:var(--line)}
+.story-more>summary{font-size:14px;min-height:44px;color:var(--green)}
+.story-more label{margin-top:12px;font-size:13px}
+.story-more select{margin-top:7px}
+.story-case-body .case-panel{margin-top:8px}
+@media(max-width:640px){
+ .workspace[data-view="logic"] #logic-content{padding:12px 9px;min-height:0}
+ .workspace[data-view="logic"] .logic-controls{padding:6px 8px!important}
+ .workspace[data-view="logic"] .logic-tracks{width:100%}
+ .workspace[data-view="logic"] .logic-tracks button{flex:1;font-size:14px;min-width:0;white-space:normal}
+ .story-intro{margin-bottom:15px}.story-intro h2{font-size:22px}
+ .story-intro p{font-size:13px}
+ .story-steps::before{left:18px}
+ .story-step{grid-template-columns:36px minmax(0,1fr);gap:9px}
+ .story-step-number{width:36px;height:36px;font-size:15px}
+ .story-step-main{padding:13px}
+ .story-step h3{font-size:18px}
+ .story-step-main>p{font-size:15px;line-height:1.65}
+ .story-unknown{margin-left:45px;padding:12px}
+}
+/* 四個全站知識統計容易被誤認為功能驗收，全部撤下；進度頁保留真實驗收統計。 */
+.workspace>#stats{display:none!important}
+/* 開發歷程直接進入日誌，不重複顯示全站標語。 */
+@media(min-width:641px){
+  .workspace[data-view="evolution"] .context{padding:3px 0;justify-content:flex-end}
+  .workspace[data-view="evolution"] .context>div:first-child{display:none}
+  .workspace[data-view="evolution"] .context .controls{max-width:320px}
+}
+.workspace[data-view="evolution"] .evolution-controls{padding:12px 16px;gap:10px}
+.workspace[data-view="evolution"] main:has(#drawer:not(.open)){grid-template-columns:minmax(0,1fr)}
+.workspace[data-view="evolution"] #drawer:not(.open){display:none}
+.workspace[data-view="evolution"] .evolution-tracks{width:100%;max-width:580px}
+.workspace[data-view="evolution"] .evolution-tracks button{flex:1;font-size:14px;min-height:44px;min-width:0}
+.workspace[data-view="evolution"] .evolution-banner{display:none}
+.workspace[data-view="evolution"] .evolution-asof-bar{margin-left:auto}
+.workspace[data-view="evolution"] .evo-asof-label[hidden],
+.workspace[data-view="evolution"] #evo-step-nav[hidden],
+.workspace[data-view="evolution"] #evolution-rail[hidden]{display:none!important}
+.workspace[data-view="evolution"] .evolution-body.single-col{display:flex;flex-direction:column}
+.workspace[data-view="evolution"] #evolution-content{width:100%;flex:1;padding:16px clamp(14px,3.2vw,48px)}
+.journal-intro{border:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:0 auto 18px;max-width:1000px}
+.journal-intro h2{font-size:27px;line-height:1.2;margin:0}
+.journal-intro p{width:100%;order:3;color:var(--muted);font-size:14px;line-height:1.6;margin:2px 0 0}
+.journal-intro small{color:var(--muted);font-size:13px}
+.journal-day{max-width:1000px;margin:0 auto 12px;border:1px solid var(--line);border-radius:13px;background:var(--bg);overflow:hidden}
+.journal-day>details{padding:0!important}
+.journal-day>details>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:120px minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:18px 20px;font-size:16px;min-height:78px}
+.journal-day>details>summary::-webkit-details-marker{display:none}
+.journal-day>details[open]>summary{border-bottom:1px solid var(--line);background:var(--panel)}
+.journal-date{font-weight:700;font-size:18px;color:var(--green);white-space:nowrap}
+.journal-heading{font-size:18px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.journal-count{font-size:12px;color:var(--muted);white-space:nowrap}
+.journal-fold{color:var(--green);font-size:13px;white-space:nowrap}
+.journal-day>details[open]>summary .journal-fold{display:none}
+.journal-day-body{padding:18px 22px}
+.journal-key-points,.journal-more ul{padding:0;margin:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.journal-key-points li,.journal-more li{display:grid;grid-template-columns:minmax(160px,.7fr) minmax(0,1.5fr) auto;gap:12px;align-items:start;padding:0 0 12px;border-bottom:1px solid var(--line)}
+.journal-key-points li:last-child{border-bottom:0}
+.journal-key-points b{font-size:16px;line-height:1.5}
+.journal-key-points span,.journal-more li span{font-size:15px;line-height:1.6;color:var(--ink);overflow-wrap:anywhere}
+.journal-key-points em{font-style:normal;color:var(--amber);font-size:12px;white-space:nowrap}
+.journal-more,.journal-source{border-top:1px solid var(--line);padding:12px 0 0!important;margin-top:10px}
+.journal-more>summary,.journal-source>summary{cursor:pointer;color:var(--green);font-size:14px;min-height:42px;display:flex;align-items:center;list-style:none}
+.journal-more ul{margin-top:12px}.journal-more li button{text-align:left;font-size:14px}
+.journal-source .evo-batch-card{margin-top:12px}
+.journal-no-detail{font-size:15px;line-height:1.6;color:var(--muted);margin:0}
+@media(max-width:720px){
+ .workspace[data-view="evolution"] .evolution-controls{padding:6px 8px!important}
+ .workspace[data-view="evolution"] .evolution-tracks{max-width:none}
+ .workspace[data-view="evolution"] .evolution-tracks button{font-size:14px;min-height:46px;min-width:0}
+ .workspace[data-view="evolution"] #evolution-content{padding:12px 10px}
+ .journal-intro{margin-bottom:12px}.journal-intro h2{font-size:23px}
+ .journal-day>details>summary{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:14px}
+ .journal-date{font-size:15px}.journal-heading{grid-column:1/-1;grid-row:2;font-size:18px}
+ .journal-count{grid-column:2;grid-row:1;font-size:12px}
+ .journal-fold{display:none}
+ .journal-day-body{padding:14px}
+ .journal-key-points li,.journal-more li{display:flex;flex-direction:column;gap:3px;padding-bottom:12px}
+ .journal-key-points b{font-size:17px}.journal-key-points span,.journal-more li span{font-size:15px}
+ .journal-key-points em{font-size:12px}
+}
+.next-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.next-head h2{font-size:19px;margin:0}
+.next-counts{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.next-counts span{padding:5px 9px;border:1px solid var(--line);border-radius:8px}
+.next-counts b{color:var(--ink);margin-left:3px}
+.next-caveat{font-size:12px;color:var(--muted);margin:8px 0 14px;line-height:1.55}
+.next-stage{margin:0 0 18px}
+.next-stage h2{font-size:16px;display:flex;gap:8px;align-items:center;margin:0 0 3px}
+.next-stage h2 small{color:var(--muted);font-weight:400}
+.next-stage-desc{font-size:12px;color:var(--muted);margin:4px 0 8px}
+.next-list{display:grid;gap:7px}
+.next-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px;min-width:0}
+.next-item>div{min-width:0;flex:1}
+.next-item h3{font-size:16px;margin:0 0 4px}
+.next-item p{font-size:13px;margin:2px 0;color:var(--ink);line-height:1.45}
+.next-item small{font-size:12px;display:block;color:var(--muted);line-height:1.5}
+.next-item button{flex:none;color:var(--green);border-color:var(--line);font-size:13px;min-height:40px;white-space:nowrap}
+.evo-timeline-hint{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.5}
+#evo-step-nav [data-evo-changes][aria-pressed="true"]{color:var(--green);border-color:var(--green)}
+#evolution-rail .rail-entry{position:relative;padding-left:13px}
+#evolution-rail .rail-entry::before{content:"";position:absolute;top:50%;left:2px;width:7px;height:7px;border:2px solid var(--muted);border-radius:50%;background:var(--panel);transform:translateY(-50%);z-index:1}
+#evolution-rail .rail-entry:has(button[aria-current])::before{border-color:var(--green);background:var(--green)}
+#evolution-rail .rail-entry::after{content:"";position:absolute;top:0;bottom:0;left:6px;border-left:1px solid var(--line)}
+@media(max-width:900px){
+  .next-item{align-items:stretch;flex-direction:column;gap:8px}
+  .next-item h3{font-size:18px}
+  .next-item button{align-self:flex-start;font-size:15px}
+  #evolution-rail .rail-entry{padding-left:0;padding-top:14px}
+  #evolution-rail .rail-entry::before{top:4px;left:50%;transform:translateX(-50%)}
+  #evolution-rail .rail-entry::after{top:7px;bottom:auto;left:0;right:0;border-left:0;border-top:1px solid var(--line)}
+}
+@media(max-width:640px){
+  .evo-step-nav{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:4px;overflow:visible}
+  .evo-step-nav button{min-width:0;min-height:38px;white-space:normal;font-size:12px;padding:4px}
+  #evo-prev{grid-column:1}#evo-position{grid-column:2;text-align:center;font-size:12px}
+  #evo-next{grid-column:3}#evo-all{grid-column:1 / 3}
+  #evo-step-nav [data-evo-changes]{grid-column:3}
+  #evolution-rail{display:flex;min-height:60px;max-height:64px;gap:5px;padding:3px 6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  #evolution-rail .rail-entry{flex:0 0 120px;max-width:120px;padding-top:10px}
+  #evolution-rail .rail-entry button{width:100%;height:46px;min-height:46px;padding:3px 4px;justify-content:center;gap:5px}
+  #evolution-rail .rail-entry button em{font-size:0;white-space:nowrap}
+  #evolution-rail .rail-entry button em b{font-size:12px}
+  #evolution-rail .rail-entry::before{top:0}
+  #evolution-rail .rail-entry::after{top:3px}
+}
 .closure-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
 .closure-item{text-align:left;color:var(--ink);min-width:0;cursor:pointer}
 .closure-item p{line-height:1.6;overflow-wrap:anywhere}
@@ -568,4 +845,338 @@ body[data-view="progress"] #stats { display:none; }
   .closure-board-note{font-size:15px}
   #drawer:has(.closure-detail-text) details>summary{font-size:18px}
   #drawer .closure-detail-text{font-size:17px}
+}
+/* 手機流程總覽：七個節點優先完整顯示，展開說明時再正常捲動。 */
+@media(max-width:640px){
+  .workspace[data-view="logic"] #logic-content{padding:8px 7px;min-height:0}
+  .workspace[data-view="logic"] .story-intro{margin:0 0 9px}
+  .workspace[data-view="logic"] .story-intro h2{font-size:19px;margin:0 0 2px}
+  .workspace[data-view="logic"] .story-intro p{font-size:12px;line-height:1.4}
+  .workspace[data-view="logic"] .flow-map{padding:8px}
+  .workspace[data-view="logic"] .flow-nodes{gap:7px}
+  .workspace[data-view="logic"] .flow-node{min-height:46px;padding:5px 9px}
+  .workspace[data-view="logic"] .flow-node-wrap:not(:last-child)::after{bottom:-11px;font-size:12px}
+}
+
+/* 架構展示頁：Apple Keynote / Linear 等級高對比深色企業資訊圖，一眼看懂調查迴圈與決策分流。 */
+.workspace[data-view="architecture"] .graph-panel{
+  background:radial-gradient(120% 110% at 50% 12%, #07192d 0%, #030911 65%, #020509 100%);
+  border:1px solid #1a3550;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 18px 48px rgba(0,0,0,.45), inset 0 1px 0 rgba(145,205,255,.08);
+}
+.workspace[data-view="architecture"] .graph-toolbar{
+  justify-content:center;
+  text-align:center;
+  padding:10px 24px 2px;
+  border-bottom:1px solid rgba(38,79,115,.35);
+  background:linear-gradient(180deg, rgba(10,28,48,.55) 0%, rgba(4,12,22,0) 100%);
+}
+.workspace[data-view="architecture"] .arch-heading{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  max-width:980px;
+}
+.workspace[data-view="architecture"] .arch-eyebrow{
+  color:#67dbb0;
+  font-size:10.5px;
+  letter-spacing:2.2px;
+  font-weight:700;
+  text-transform:uppercase;
+}
+.workspace[data-view="architecture"] #graph-heading{
+  font-size:clamp(20px,2vw,26px);
+  font-weight:750;
+  letter-spacing:.2px;
+  color:#f4faff;
+  line-height:1.28;
+}
+.workspace[data-view="architecture"] #count{
+  font-size:clamp(12px,.95vw,13.5px);
+  color:#9bbbd4;
+  line-height:1.45;
+}
+.workspace[data-view="architecture"] #canvas{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:0;
+  height:auto;
+  border:0;
+  background:
+    radial-gradient(rgba(58,118,172,.16) 1px, transparent 1px),
+    radial-gradient(90% 85% at 52% 48%, rgba(14,42,72,.32) 0%, rgba(2,6,11,0) 100%);
+  background-size:22px 22px, 100% 100%;
+  overflow:hidden;
+  touch-action:auto;
+  padding:4px 8px;
+}
+.workspace[data-view="architecture"] #graph{
+  flex:none;
+  margin:auto;
+  display:block;
+  min-height:0;
+}
+.workspace[data-view="architecture"] #graph svg{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  min-height:0;
+  overflow:visible;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;
+}
+.workspace[data-view="architecture"] #graph .arch-zone-tag{
+  font-size:11px;
+  font-weight:750;
+  letter-spacing:1.4px;
+}
+.workspace[data-view="architecture"] #graph .arch-zone-title{
+  font-size:12px;
+  font-weight:600;
+  fill:#8cb0cc;
+}
+.workspace[data-view="architecture"] #graph .arch-loop-badge-text{
+  font-size:12px;
+  font-weight:700;
+  fill:#ffd591;
+  letter-spacing:.2px;
+}
+.workspace[data-view="architecture"] #graph .arch-callout-kicker{
+  font-size:12px;
+  font-weight:750;
+  fill:#7cc4fa;
+  letter-spacing:.6px;
+}
+.workspace[data-view="architecture"] #graph .arch-principle-head{
+  font-size:13px;
+  font-weight:700;
+  fill:#e6f4ff;
+}
+.workspace[data-view="architecture"] #graph .arch-principle-desc{
+  font-size:11.5px;
+  font-weight:450;
+  fill:#95b6d0;
+}
+.workspace[data-view="architecture"] #graph .arch-guardrail-title{
+  font-size:14px;
+  font-weight:700;
+  fill:#e8fff8;
+}
+.workspace[data-view="architecture"] #graph .arch-guardrail-sub{
+  font-size:11.5px;
+  font-weight:500;
+  fill:#98cfc2;
+}
+.workspace[data-view="architecture"] #graph .node{
+  cursor:default;
+}
+.workspace[data-view="architecture"] #graph .node .node-card{
+  fill:url(#arch-card-step);
+  stroke:#2b5782;
+  stroke-width:1.5;
+  rx:15px;
+  ry:15px;
+}
+.workspace[data-view="architecture"] #graph .node .node-highlight{
+  stroke:rgba(185,228,255,.22);
+  stroke-width:1;
+}
+.workspace[data-view="architecture"] #graph .node .node-num-bg{
+  fill:#173d66;
+  stroke:#356ea6;
+  stroke-width:1;
+}
+.workspace[data-view="architecture"] #graph .node .node-num{
+  font-size:12px;
+  font-weight:750;
+  fill:#9fd4ff;
+  letter-spacing:.3px;
+}
+.workspace[data-view="architecture"] #graph .node .node-title{
+  font-size:17px;
+  font-weight:720;
+  fill:#f0f8ff;
+  letter-spacing:.1px;
+}
+.workspace[data-view="architecture"] #graph .node .node-sub{
+  font-size:12.5px;
+  font-weight:480;
+  fill:#9ec0dc;
+}
+.workspace[data-view="architecture"] #graph .node .node-role-pill{
+  fill:#2b1e0f;
+  stroke:#e5a95c;
+  stroke-width:1.2;
+}
+.workspace[data-view="architecture"] #graph .node .node-role-text{
+  font-size:11px;
+  font-weight:700;
+  fill:#ffd591;
+}
+.workspace[data-view="architecture"] #graph .node.entry .node-card{
+  stroke:#3d7ab3;
+}
+.workspace[data-view="architecture"] #graph .node.planner .node-card{
+  fill:url(#arch-card-planner);
+  stroke:#569cd6;
+  stroke-width:1.8;
+}
+.workspace[data-view="architecture"] #graph .node.decision .node-card{
+  fill:url(#arch-card-decision);
+  stroke:#4b8cc4;
+  stroke-width:1.7;
+}
+.workspace[data-view="architecture"] #graph .node.decision .node-role-pill{
+  fill:#0d2c47;
+  stroke:#62b0e8;
+}
+.workspace[data-view="architecture"] #graph .node.decision .node-role-text{
+  fill:#b8e2ff;
+}
+.workspace[data-view="architecture"] #graph .node.limit .node-card{
+  fill:url(#arch-card-limit);
+  stroke:#966d37;
+}
+.workspace[data-view="architecture"] #graph .node.limit .node-num-bg{
+  fill:#3d2b14;
+  stroke:#b58342;
+}
+.workspace[data-view="architecture"] #graph .node.limit .node-num{
+  fill:#ffd089;
+}
+.workspace[data-view="architecture"] #graph .node.limit .node-title{
+  fill:#fff4e2;
+}
+.workspace[data-view="architecture"] #graph .node.limit .node-sub{
+  fill:#d4b58c;
+}
+.workspace[data-view="architecture"] #graph .node.summary .node-card{
+  fill:url(#arch-card-summary);
+  stroke:#337b8c;
+}
+.workspace[data-view="architecture"] #graph .node.summary .node-num-bg{
+  fill:#124452;
+  stroke:#3c8fa1;
+}
+.workspace[data-view="architecture"] #graph .node.summary .node-num{
+  fill:#9beeff;
+}
+.workspace[data-view="architecture"] #graph .node.outcome .node-card{
+  fill:url(#arch-card-outcome);
+  stroke:#43d1a4;
+  stroke-width:1.85;
+}
+.workspace[data-view="architecture"] #graph .node.outcome .node-num-bg{
+  fill:#114d44;
+  stroke:#49d6a9;
+}
+.workspace[data-view="architecture"] #graph .node.outcome .node-num{
+  fill:#7ff5ce;
+}
+.workspace[data-view="architecture"] #graph .node.outcome .node-title{
+  fill:#ecfff8;
+}
+.workspace[data-view="architecture"] #graph .node.outcome .node-sub{
+  fill:#9de0cb;
+}
+.workspace[data-view="architecture"] #graph .architecture-wire{
+  fill:none;
+  stroke:#89b8e0;
+  stroke-width:1.85;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.workspace[data-view="architecture"] #graph .architecture-wire.loop{
+  stroke:#f5be6b;
+  stroke-width:2.05;
+  stroke-dasharray:6 4;
+}
+.workspace[data-view="architecture"] #graph .architecture-wire.ok{
+  stroke:#5ce1b6;
+  stroke-width:1.95;
+}
+.workspace[data-view="architecture"] #graph .architecture-wire.limit{
+  stroke:#e5a95c;
+  stroke-width:1.85;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch rect{
+  fill:#051322;
+  stroke:#366a96;
+  stroke-width:1.25;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.loop rect{
+  fill:#1f160b;
+  stroke:#d89c4a;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.ok rect{
+  fill:#06211d;
+  stroke:#37b890;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.limit rect{
+  fill:#21180d;
+  stroke:#b8823e;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch .branch-main{
+  fill:#d4ecff;
+  font-size:12.5px;
+  font-weight:700;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.loop .branch-main{
+  fill:#ffd694;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.ok .branch-main{
+  fill:#8cf5d2;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.limit .branch-main{
+  fill:#f5ca8c;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch .branch-sub{
+  fill:#98b7d1;
+  font-size:10.5px;
+  font-weight:500;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.loop .branch-sub{
+  fill:#d9b074;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.ok .branch-sub{
+  fill:#6ec4a9;
+}
+.workspace[data-view="architecture"] #graph .architecture-branch.limit .branch-sub{
+  fill:#c9a06a;
+}
+.workspace[data-view="architecture"] .graph-foot{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:4px 16px 7px;
+  font-size:11px;
+  color:#7c9ab0;
+  text-align:center;
+  border-top:1px solid rgba(38,79,115,.28);
+}
+.arch-note-dot{width:6px;height:6px;flex:none;border-radius:50%;background:#65cfbd}
+@media(max-width:640px){
+ .workspace[data-view="architecture"] .graph-panel{border-radius:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+ .workspace[data-view="architecture"] .graph-toolbar{padding:10px 10px 6px}
+ .workspace[data-view="architecture"] #graph-heading{font-size:19px}
+ .workspace[data-view="architecture"] #count{font-size:12px}
+ .workspace[data-view="architecture"] #canvas{
+    display:block;
+    height:auto;
+    max-height:none;
+    min-height:0;
+    flex:none;
+    padding:6px 2px 4px;
+    overflow:visible;
+ }
+ .workspace[data-view="architecture"] #graph{margin:0 auto}
+ .workspace[data-view="architecture"] .graph-foot{font-size:11px;line-height:1.45;padding:6px 10px 10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .workspace[data-view="architecture"] #graph *{transition:none!important;animation:none!important}
 }

@@ -7,89 +7,410 @@
   themeToggle.addEventListener('click',()=>{const theme=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;try{localStorage.setItem('pih_v2_theme',theme);}catch{}syncTheme();});
   window.addEventListener('storage',e=>{if(e.key==='pih_v2_theme'){document.documentElement.dataset.theme=e.newValue==='light'?'light':'dark';syncTheme();}});
   const mobile = () => matchMedia('(max-width:640px)').matches;
-  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#thumb-bar,#step-picker,#mobile-search').forEach(e=>e.inert=active);}
+  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#thumb-bar,#step-picker').forEach(e=>e.inert=active);}
   new MutationObserver(syncSheet).observe($('#drawer'),{attributes:true,attributeFilter:['class']});
   $('#drawer-backdrop').addEventListener('click',()=>close());
   window.addEventListener('resize',syncSheet);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const txt = v => typeof v === 'string' ? v : JSON.stringify(v, null, 2);
   let viewName = 'architecture', logicId = null, logicIndex = 0, logicAll = false;
-  let data, expanded = false, listMode = matchMedia('(max-width:900px)').matches;
-  let selected = null, origin = null, request = 0, nodes = [], edges = [], camera = [0,0,1100,650], bounds = [1100,650];
+  let data;
+  let selected = null, origin = null, request = 0, edges = [];
   const stateBadge = s => `<span class="pill ${s.tone}">${esc(s.label)}</span>${s.issue==='open'?'<span class="pill red">未解問題</span>':''}`;
   const entity = id => data?.entities?.find(e => e.id === id);
-  const matched = e => !$('#search').value || `${e.title} ${e.plain_summary.purpose} ${e.responsibility.role_type}`.toLowerCase().includes($('#search').value.toLowerCase());
+  const matched = e => Boolean(e);
   const scopeLabel = e => ({action:'MVP 行動型',history:'歷史調查型',shared:'雙 Agent 共用',unknown:'適用範圍待確認'}[e.agent_scope]);
-  const openGroups = new Set();
-  function mobileNeighbors(id, relations){
+  function mobileNeighbors(id,relations){
     const incoming=new Set(),outgoing=new Set();
     for(const r of relations||[]){if(r.target===id&&r.source!==id)incoming.add(r.source);if(r.source===id&&r.target!==id)outgoing.add(r.target);}
     return {incoming:[...incoming],outgoing:[...outgoing]};
   }
-  function mobileGroups(groups){return `<div class="group-actions"><button data-groups="open">全部展開</button><button data-groups="close">全部收合</button></div>`+groups.map(g=>{const achieved=g.members.filter(id=>entity(id)?.state.core_outcome==='achieved').length;return `<details class="mobile-group" data-group-id="${esc(g.id)}" ${query()||openGroups.has(g.id)?'open':''}><summary><span><b>${esc(g.title)}</b><small>${esc(g.summary||'依來源整理的知識分群')}</small></span><span class="group-count"><i class="dot ${achieved?'green':'amber'}"></i>${g.members.length} 項</span></summary><p class="scope">${achieved} 項核心成果 · 依功能分類</p>${g.members.map(id=>{const e=entity(id);return `<button class="list-item" data-node="${esc(id)}"><b>${esc(e.title)}</b>${stateBadge(e.state)}<small>${esc(scopeLabel(e))} · ${esc(e.responsibility.role_type)}</small></button>`;}).join('')}</details>`;}).join('');}
-  // Pure layout: stable ordering, bounded group columns, dynamic member heights.
-  // Navigation grouping is not execution order. All dependency edges come from DTO.
-  function layout(groups, full) {
-    const result = [], boxes = []; let y = 24;
-    for(let start=0;start<groups.length;start+=3){
-      const row=groups.slice(start,start+3);
-      const height=full?Math.max(...row.map(g=>64+g.members.length*116)):86;
-      row.forEach((g,col)=>{
-        const x=24+col*(full?370:300);
-        boxes.push({...g,x,y,w:330,h:height});
-        if(full)g.members.forEach((id,i)=>{const e=entity(id);result.push({id,title:e.title,x:x+12,y:y+48+i*116,w:306,h:104,group:g.id,entity:e});});
-        else result.push({id:'group:'+g.id,title:g.title,x,y,w:270,h:86,group:g.id,members:g.members});
-      });y+=height+(full?70:30);
+  // 一張圖說清楚 Agent 的工作方式：展示已記錄的設計意圖，不把示意圖當驗收證據。
+  const architectureScenes={
+    action:{
+      eyebrow:'MVP ACTION AGENT · 即時異常決策分流架構',
+      title:'AI 怎麼協助現場處理即時異常？',
+      caption:'從設備即時資料找出異常、分流「需處理」與「不需處理」，在 Dashboard 呈現建議並由現場人員最終確認。',
+      steps:[
+        'A("取得設備即時資料")',
+        'B("找出需要注意的異常")',
+        'C("判斷是否需要處理")',
+        'D("提出下一步建議")',
+        'E("說明不需處理原因")',
+        'F("在 Dashboard 顯示結果")',
+        'G("由現場人員確認")',
+        'A --> B --> C',
+        'C -->|"需要處理"| D',
+        'C -->|"不需要處理"| E',
+        'D --> F',
+        'E --> F',
+        'F --> G',
+        'class A,B,C,D,E,F step',
+        'class G result'
+      ]
+    },
+    history:{
+      eyebrow:'HISTORICAL INVESTIGATION AGENT · 多輪調查與證據驗證架構',
+      title:'AI 怎麼深入追查重複發生的異常？',
+      caption:'發現問題後規劃調查方向，透過「調查迴圈」反覆查閱歷史紀錄、比對並驗證證據，最後整理交班摘要與下一步建議。',
+      steps:[
+        'A("發現重複異常")',
+        'B("決定調查方向")',
+        'C("查歷史維修紀錄")',
+        'D("整理調查證據")',
+        'E("判斷是否查得足夠")',
+        'F("驗證分析結論")',
+        'G("說明資料限制")',
+        'H("整理分析與交班摘要")',
+        'I("提出下一步建議")',
+        'A --> B --> C --> D --> E',
+        'E -->|"目前資料還不夠，值得再查"| B',
+        'E -->|"資料足夠，進入驗證"| F',
+        'F -->|"還不能下結論，要補資料"| B',
+        'F -->|"資料互相矛盾，重檢假設"| B',
+        'E -->|"已達調查限制"| G',
+        'F -->|"結論有證據支持"| H',
+        'G --> H',
+        'H --> I',
+        'class A,B,C,D,E,F,G,H step',
+        'class I result'
+      ]
     }
-    return {nodes:result,boxes,width:full?1120:920,height:Math.max(y,400)};
-  }
-  function wrap(title, max=19){const chars=Array.from(title);return [chars.slice(0,max).join(''),chars.slice(max,max*2-1).join('')+(chars.length>max*2-1?'…':'')].filter(Boolean);}
-  function graphEdges(){
-    if(expanded)return data.relationships;
-    const map=new Map();
-    for(const e of data.relationships){const a=entity(e.source),b=entity(e.target);if(!a||!b||a.group_id===b.group_id)continue;
-      const key=[a.group_id,b.group_id,e.confidence].join(':');
-      if(!map.has(key))map.set(key,{id:'aggregate:'+key,source:'group:'+a.group_id,target:'group:'+b.group_id,confidence:e.confidence,label:'',members:[],events:[]});
-      const item=map.get(key);item.members.push(e.id);item.events.push(...e.events);item.label=`${item.members.length} 項來源關係`;
-    }return [...map.values()];
-  }
-  function renderGraph(){
-    const groups=data.groups.map(g=>({...g,members:g.members.filter(id=>matched(entity(id)))})).filter(g=>g.members.length);
-    const l=layout(groups,expanded);nodes=l.nodes;bounds=[l.width,l.height];edges=graphEdges().filter(e=>nodes.some(n=>n.id===e.source)&&nodes.some(n=>n.id===e.target));
-    let svg='<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--blue)"/></marker></defs>';
-    if(expanded)svg+=l.boxes.map(g=>`<rect class="group-bg" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="12"/><text x="${g.x+14}" y="${g.y+28}" fill="var(--green)" font-size="14">${esc(g.title)} · ${g.members.length}</text>`).join('');
-    svg+=edges.map((e,i)=>{
-      const a=nodes.find(n=>n.id===e.source),b=nodes.find(n=>n.id===e.target);
-      const ax=a.x+a.w/2,ay=a.y+a.h,bx=b.x+b.w/2,by=b.y;
-      // Route returns through a side gutter; keep arrow direction even in cycles.
-      const mid=ay+18+(i%4)*8;
-      const d=by>ay?`M${ax} ${ay} V${mid} H${bx} V${by}`:`M${a.x+a.w} ${a.y+a.h/2} H${a.x+a.w+16+(i%3)*5} V${b.y-14} H${bx} V${by}`;
-      return `<g class="edge ${e.confidence==='inferred'?'inferred':''}" tabindex="0" role="button" data-edge="${esc(e.id)}" aria-label="關係：${esc(a.title)} → ${esc(b.title)}"><title>${esc(e.label)}；${e.confidence==='inferred'?'推論／規劃':'有來源紀錄，非獨立驗證'}</title><path class="hit" d="${d}"/><path class="line" d="${d}" marker-end="url(#arrow)"/></g>`;
+  };
+  const architectureLayout={
+    history:{
+      size:[1400,544],
+      zones:[
+        {x:16,y:14,w:212,h:516,tag:'STAGE 01',title:'問題發現與原則',tone:'entry'},
+        {x:242,y:14,w:724,h:516,tag:'STAGE 02 – 03 · INVESTIGATION LOOP',title:'核心調查迴圈（規劃・查詢・評估・驗證）',tone:'loop'},
+        {x:1132,y:14,w:252,h:516,tag:'STAGE 04',title:'摘要與建議交付',tone:'output'}
+      ],
+      loopCourt:{x:256,y:62,w:696,h:452,badge:'↻ 調查迴圈（Investigation Loop）· 證據不足或發現矛盾時自動回到「02 決定調查方向」'},
+      callouts:[
+        {
+          x:26,y:192,w:192,h:320,tone:'principles',
+          kicker:'AI 調查三大原則',
+          items:[
+            ['01 多輪追查','資料不夠時自動重規劃方向，繼續查閱歷史紀錄。'],
+            ['02 嚴格驗證','檢查結論是否有證據支持；若資料矛盾則重檢假設。'],
+            ['03 誠實邊界','達調查限制時明確列出缺口，絕不硬湊已確認根因。']
+          ]
+        },
+        {
+          x:1144,y:94,w:228,h:82,tone:'guardrail',
+          kicker:'人工決策邊界',
+          title:'AI 整理證據，人員做決定',
+          sub:'提供優先順序與方向，不自動派工或改機'
+        }
+      ],
+      boxes:{
+        A:{x:26,y:94,w:192,h:72,num:'01',title:'發現重複異常',sub:'從即時資料找出重複問題',variant:'entry'},
+        B:{x:266,y:94,w:202,h:72,num:'02',title:'決定調查方向',sub:'規劃要先查哪些異常線索',variant:'planner',badge:'↻ 迴圈起點'},
+        C:{x:500,y:94,w:202,h:72,num:'03',title:'查歷史維修紀錄',sub:'調閱過去維修與異常資料',variant:'step'},
+        D:{x:734,y:94,w:206,h:72,num:'04',title:'整理調查證據',sub:'比對不同來源的資料線索',variant:'step'},
+        E:{x:734,y:206,w:206,h:72,num:'05',title:'判斷是否查得足夠',sub:'評估現有證據是否足夠支持',variant:'decision'},
+        F:{x:734,y:340,w:206,h:72,num:'06',title:'驗證分析結論',sub:'檢查結論有根據且無矛盾',variant:'decision'},
+        G:{x:1144,y:206,w:228,h:72,num:'07',title:'說明資料限制',sub:'標示目前缺口，不硬下結論',variant:'limit'},
+        H:{x:1144,y:340,w:228,h:72,num:'08',title:'整理分析與交班摘要',sub:'彙整異常、證據與已知限制',variant:'summary'},
+        I:{x:1144,y:444,w:228,h:72,num:'09',title:'提出下一步建議',sub:'提供後續處理方向供現場決定',variant:'outcome'}
+      },
+      wires:[
+        {d:'M218 130 H266',tone:'forward'},
+        {d:'M468 130 H500',tone:'forward'},
+        {d:'M702 130 H734',tone:'forward'},
+        {d:'M837 166 V206',tone:'forward'},
+        {d:'M734 242 H416 Q402 242 402 228 V166',tone:'loop',label:'↻ 目前資料還不夠，值得再查',lx:570,ly:242,pw:228,sub:'Path A · 繼續調查補充證據'},
+        {d:'M837 278 V340',tone:'ok',label:'資料足夠，進入驗證',lx:837,ly:306,pw:156,ph:24},
+        {d:'M734 376 H360 Q346 376 346 362 V166',tone:'loop',label:'↻ 還不能下結論，要補資料',lx:548,ly:376,pw:216,sub:'Path C · 驗證未通過重查'},
+        {d:'M837 412 V464 Q837 478 823 478 H308 Q294 478 294 464 V166',tone:'loop',label:'↻ 資料互相矛盾，重新檢查假設',lx:554,ly:478,pw:242,sub:'Path D · 缺關鍵證據或矛盾'},
+        {d:'M940 242 H1144',tone:'limit',label:'已達調查限制',lx:1042,ly:242,pw:122,sub:'Path E · 停止補查'},
+        {d:'M940 376 H1144',tone:'ok',label:'結論有證據支持',lx:1042,ly:376,pw:134,sub:'Path E · 驗證通過'},
+        {d:'M1258 278 V340',tone:'limit'},
+        {d:'M1258 412 V444',tone:'ok'}
+      ]
+    },
+    action:{
+      size:[1400,500],
+      zones:[
+        {x:18,y:16,w:524,h:468,tag:'STAGE 01',title:'即時資料接收與異常偵測',tone:'entry'},
+        {x:556,y:16,w:542,h:468,tag:'STAGE 02 · DECISION FLOW',title:'行動分流判斷（需處理 vs. 白名單不動作）',tone:'loop'},
+        {x:1112,y:16,w:270,h:468,tag:'STAGE 03',title:'畫面呈現與人工確認',tone:'output'}
+      ],
+      callouts:[
+        {
+          x:34,y:296,w:492,h:156,tone:'action-bar',
+          kicker:'MVP 行動型運作邊界（Single-Pass Decision Flow）',
+          cols:[
+            ['即時分流','直接依當下狀態分流，不跑多輪歷史追查。'],
+            ['白名單透明','不需動作的異常仍顯示，並說明不動作原因。'],
+            ['人工確認','AI 提供建議與理由，由現場人員最終決定。']
+          ]
+        }
+      ],
+      boxes:{
+        A:{x:34,y:140,w:226,h:80,num:'01',title:'取得設備即時資料',sub:'接收機台目前的即時狀態',variant:'entry'},
+        B:{x:300,y:140,w:226,h:80,num:'02',title:'找出需要注意的異常',sub:'合併重複訊號，鎖定異常事件',variant:'step'},
+        C:{x:574,y:140,w:238,h:80,num:'03',title:'判斷是否需要處理',sub:'區分需立即處理或固定不動作',variant:'decision',badge:'決策分流點'},
+        D:{x:858,y:66,w:224,h:80,num:'04A',title:'提出下一步建議',sub:'針對異常提供處理方向與理由',variant:'summary'},
+        E:{x:858,y:256,w:224,h:80,num:'04B',title:'說明不需處理原因',sub:'符合白名單，標示不動作原因',variant:'limit'},
+        F:{x:1128,y:140,w:240,h:80,num:'05',title:'Dashboard 顯示結果',sub:'同步呈現異常、建議與判斷依據',variant:'summary'},
+        G:{x:1128,y:344,w:240,h:84,num:'06',title:'由現場人員確認',sub:'由人員決定是否採用，不自動派工',variant:'outcome'}
+      },
+      wires:[
+        {d:'M260 180 H300',tone:'forward'},
+        {d:'M526 180 H574',tone:'forward'},
+        {d:'M693 140 V118 Q693 106 705 106 H858',tone:'ok',label:'✓ 需要處理',lx:772,ly:106,pw:112},
+        {d:'M693 220 V284 Q693 296 705 296 H858',tone:'limit',label:'— 不需要處理',lx:772,ly:296,pw:126},
+        {d:'M1082 106 H1098 Q1108 106 1108 116 V166 Q1108 172 1114 172 H1128',tone:'ok'},
+        {d:'M1082 296 H1098 Q1108 296 1108 286 V194 Q1108 188 1114 188 H1128',tone:'limit'},
+        {d:'M1248 220 V344',tone:'ok',label:'人工確認後執行',lx:1248,ly:280,pw:136}
+      ]
+    }
+  };
+  const architectureMobileLayout={
+    history:{
+      size:[370,1190],
+      zones:[
+        {x:10,y:10,w:350,h:118,tag:'STAGE 01 · 問題發現',title:''},
+        {x:10,y:140,w:350,h:642,tag:'STAGE 02 – 03 · 調查迴圈 INVESTIGATION LOOP',title:'左側虛線為迴圈軌道，資料不足或矛盾時回到 02 重查',tone:'loop'},
+        {x:10,y:816,w:350,h:362,tag:'STAGE 04 · 摘要與下一步建議',title:'完成調查或達調查上限後整理交付',tone:'output'}
+      ],
+      boxes:{
+        A:{x:24,y:48,w:322,h:64,num:'01',title:'發現重複異常',sub:'從即時資料找出重複發生的問題',variant:'entry'},
+        B:{x:76,y:198,w:270,h:64,num:'02',title:'決定調查方向',sub:'規劃要先查哪些異常線索',variant:'planner',badge:'↻ 迴圈起點'},
+        C:{x:76,y:288,w:270,h:64,num:'03',title:'查歷史維修紀錄',sub:'調閱過去維修與異常資料',variant:'step'},
+        D:{x:76,y:378,w:270,h:64,num:'04',title:'整理調查證據',sub:'比對不同來源的資料線索',variant:'step'},
+        E:{x:76,y:468,w:270,h:64,num:'05',title:'判斷是否查得足夠',sub:'評估現有證據是否足夠支持',variant:'decision'},
+        F:{x:76,y:620,w:270,h:64,num:'06',title:'驗證分析結論',sub:'檢查結論有根據且無矛盾',variant:'decision'},
+        G:{x:24,y:912,w:236,h:64,num:'07',title:'說明資料限制',sub:'標示缺口，不硬下結論',variant:'limit'},
+        H:{x:24,y:1004,w:322,h:64,num:'08',title:'整理分析與交班摘要',sub:'彙整異常、驗證過的證據與已知限制',variant:'summary'},
+        I:{x:24,y:1096,w:322,h:66,num:'09',title:'提出下一步建議',sub:'提供後續處理方向，由現場人員決定',variant:'outcome'}
+      },
+      wires:[
+        {d:'M270 112 V198',tone:'forward'},
+        {d:'M211 262 V288',tone:'forward'},
+        {d:'M211 352 V378',tone:'forward'},
+        {d:'M211 442 V468',tone:'forward'},
+        {d:'M216 532 V558 H48 Q38 558 38 548 V238 Q38 228 48 228 H76',tone:'loop',label:'↻ 資料還不夠，值得再查',lx:140,ly:558,pw:176},
+        {d:'M292 532 V620',tone:'ok',label:'資料足夠，驗證',lx:292,ly:590,pw:116},
+        {d:'M286 684 V712 H48 Q38 712 38 702 V238 Q38 228 48 228 H76',tone:'loop',label:'↻ 還不能下結論，要補資料',lx:208,ly:712,pw:192},
+        {d:'M92 684 V752 H30 Q22 752 22 742 V218 Q22 208 30 208 H76',tone:'loop',label:'↻ 資料互相矛盾，重檢假設',lx:208,ly:752,pw:196},
+        {d:'M346 500 H354 V878 H142 V912',tone:'limit',label:'已達調查限制',lx:142,ly:878,pw:116},
+        {d:'M312 684 V1004',tone:'ok',label:'結論有根據',lx:308,ly:944,pw:96},
+        {d:'M142 976 V1004',tone:'limit'},
+        {d:'M185 1068 V1096',tone:'ok'}
+      ]
+    },
+    action:{
+      size:[370,766],
+      zones:[
+        {x:10,y:10,w:350,h:204,tag:'STAGE 01 · 即時資料與異常偵測',title:''},
+        {x:10,y:226,w:350,h:304,tag:'STAGE 02 · 行動分流判斷',title:'依規則分流需處理或白名單項目',tone:'loop'},
+        {x:10,y:544,w:350,h:210,tag:'STAGE 03 · 畫面呈現與人工確認',title:'',tone:'output'}
+      ],
+      boxes:{
+        A:{x:24,y:46,w:322,h:64,num:'01',title:'取得設備即時資料',sub:'接收機台目前的即時狀態',variant:'entry'},
+        B:{x:24,y:134,w:322,h:64,num:'02',title:'找出需要注意的異常',sub:'合併重複訊號，鎖定異常事件',variant:'step'},
+        C:{x:24,y:280,w:322,h:64,num:'03',title:'判斷是否需要處理',sub:'區分需立即處理或固定不動作',variant:'decision',badge:'決策分流'},
+        D:{x:20,y:410,w:160,h:90,num:'04A',title:'提出下一步建議',sub:'提供處理方向與理由',variant:'summary',numTop:true},
+        E:{x:190,y:410,w:160,h:90,num:'04B',title:'說明不需處理原因',sub:'白名單標示不動作',variant:'limit',numTop:true},
+        F:{x:24,y:582,w:322,h:64,num:'05',title:'在 Dashboard 顯示結果',sub:'同步呈現異常、建議與判斷依據',variant:'summary'},
+        G:{x:24,y:672,w:322,h:68,num:'06',title:'由現場人員確認',sub:'由人員決定是否採用，不自動派工',variant:'outcome'}
+      },
+      wires:[
+        {d:'M185 110 V134',tone:'forward'},
+        {d:'M284 198 V280',tone:'forward'},
+        {d:'M100 344 V410',tone:'ok',label:'✓ 需要處理',lx:100,ly:376,pw:104},
+        {d:'M270 344 V410',tone:'limit',label:'— 不需要處理',lx:270,ly:376,pw:116},
+        {d:'M100 500 V512 Q100 520 110 520 H276 Q284 520 284 528 V582',tone:'ok'},
+        {d:'M284 500 V582',tone:'limit'},
+        {d:'M185 646 V672',tone:'ok'}
+      ]
+    }
+  };
+  function architectureShowcase(scope,source,isMobile=false){
+    const spec=(isMobile?architectureMobileLayout:architectureLayout)[scope];
+    const [W,H]=spec.size;
+    const svgEsc=s=>esc(s);
+    const markerFor=tone=>tone==='loop'?'url(#arch-arrow-loop)':tone==='ok'?'url(#arch-arrow-ok)':tone==='limit'?'url(#arch-arrow-limit)':'url(#arch-arrow)';
+    const zonesHtml=(spec.zones||[]).map(z=>{
+      const isLoop=z.tone==='loop',isOut=z.tone==='output';
+      const stroke=isLoop?'#255985':isOut?'#1f5c54':'#18324a';
+      const fill=isLoop?'url(#arch-zone-loop)':isOut?'url(#arch-zone-out)':'url(#arch-zone-base)';
+      const tagColor=isLoop?'#f5be6b':isOut?'#63e2b7':'#7cc4fa';
+      return `<g class="arch-zone ${z.tone||''}">`+
+        `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="18" fill="${fill}" stroke="${stroke}" stroke-width="${isLoop?1.5:1.1}"/>`+
+        `<text x="${z.x+16}" y="${z.y+22}" class="arch-zone-tag" fill="${tagColor}">${svgEsc(z.tag)}</text>`+
+        (z.title?`<text x="${z.x+(isMobile?16:z.w-16)}" y="${z.y+(isMobile?40:22)}" text-anchor="${isMobile?'start':'end'}" class="arch-zone-title">${svgEsc(z.title)}</text>`:'')+
+      `</g>`;
     }).join('');
-    svg+=nodes.map(n=>{
-      const lines=wrap(n.title);let caption,state;
-      if(n.entity){caption=scopeLabel(n.entity);state=n.entity.state.label;}
-      else{const members=n.members.map(entity);const achieved=members.filter(e=>e.state.core_outcome==='achieved').length;caption=`${members.length} 個模組 · ${achieved} 項核心成果`;state='探索分群 →';}
-      return `<g class="node" tabindex="0" role="button" data-node="${esc(n.id)}" aria-label="${esc(n.title)}"><title>${esc(n.title)}</title><rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="10"/>${lines.map((s,i)=>`<text x="${n.x+14}" y="${n.y+24+i*19}">${esc(s)}</text>`).join('')}<text class="caption" x="${n.x+14}" y="${n.y+n.h-28}">${esc(caption)}</text><text class="${n.entity?n.entity.state.tone:'caption'}" x="${n.x+14}" y="${n.y+n.h-10}" font-size="12">${esc(state)}</text>${n.entity?.state.issue==='open'?`<text class="red" x="${n.x+n.w-80}" y="${n.y+n.h-10}">未解問題</text>`:''}</g>`;
+    const loopCourtHtml=spec.loopCourt?`<g class="arch-loop-court">`+
+      `<rect x="${spec.loopCourt.x}" y="${spec.loopCourt.y}" width="${spec.loopCourt.w}" height="${spec.loopCourt.h}" rx="14" fill="rgba(12,34,58,0.38)" stroke="#2e6798" stroke-width="1.3" stroke-dasharray="6 4"/>`+
+      `<rect x="${spec.loopCourt.x+14}" y="${spec.loopCourt.y-13}" width="510" height="25" rx="12.5" fill="#0b2138" stroke="#3b7ab0" stroke-width="1.2"/>`+
+      `<text x="${spec.loopCourt.x+28}" y="${spec.loopCourt.y}" dominant-baseline="central" class="arch-loop-badge-text">${svgEsc(spec.loopCourt.badge)}</text>`+
+    `</g>`:'';
+    const calloutsHtml=(spec.callouts||[]).map(c=>{
+      if(c.tone==='principles'){
+        const rows=c.items.map(([head,desc],idx)=>{
+          const ry=c.y+54+idx*88;
+          return `<g class="arch-principle-row">`+
+            `<rect x="${c.x+12}" y="${ry}" width="${c.w-24}" height="76" rx="10" fill="#081829" stroke="#1c3b57" stroke-width="1"/>`+
+            `<text x="${c.x+22}" y="${ry+22}" class="arch-principle-head">${svgEsc(head)}</text>`+
+            `<text x="${c.x+22}" y="${ry+44}" class="arch-principle-desc">${svgEsc(desc.slice(0,13))}</text>`+
+            `<text x="${c.x+22}" y="${ry+62}" class="arch-principle-desc">${svgEsc(desc.slice(13))}</text>`+
+          `</g>`;
+        }).join('');
+        return `<g class="arch-callout principles">`+
+          `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="14" fill="#061220" stroke="#1d3c58" stroke-width="1.2"/>`+
+          `<text x="${c.x+16}" y="${c.y+28}" class="arch-callout-kicker">${svgEsc(c.kicker)}</text>`+
+          rows+
+        `</g>`;
+      }
+      if(c.tone==='guardrail'){
+        return `<g class="arch-callout guardrail">`+
+          `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="14" fill="#071f24" stroke="#265e63" stroke-width="1.2" stroke-dasharray="4 3"/>`+
+          `<text x="${c.x+16}" y="${c.y+23}" class="arch-callout-kicker" fill="#63e2b7">${svgEsc(c.kicker)}</text>`+
+          `<text x="${c.x+16}" y="${c.y+46}" class="arch-guardrail-title">${svgEsc(c.title)}</text>`+
+          `<text x="${c.x+16}" y="${c.y+66}" class="arch-guardrail-sub">${svgEsc(c.sub)}</text>`+
+        `</g>`;
+      }
+      if(c.tone==='action-bar'){
+        const colW=Math.floor((c.w-36)/3);
+        const cols=c.cols.map(([head,desc],idx)=>{
+          const cx=c.x+10+idx*(colW+8);
+          return `<g>`+
+            `<rect x="${cx}" y="${c.y+42}" width="${colW}" height="92" rx="10" fill="#081829" stroke="#1c3b57" stroke-width="1"/>`+
+            `<text x="${cx+10}" y="${c.y+64}" class="arch-principle-head">${svgEsc(head)}</text>`+
+            `<text x="${cx+10}" y="${c.y+86}" class="arch-principle-desc">${svgEsc(desc.slice(0,11))}</text>`+
+            `<text x="${cx+10}" y="${c.y+104}" class="arch-principle-desc">${svgEsc(desc.slice(11,22))}</text>`+
+            (desc.length>22?`<text x="${cx+10}" y="${c.y+122}" class="arch-principle-desc">${svgEsc(desc.slice(22))}</text>`:'')+
+          `</g>`;
+        }).join('');
+        return `<g class="arch-callout action-bar">`+
+          `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="14" fill="#061220" stroke="#1d3c58" stroke-width="1.2"/>`+
+          `<text x="${c.x+14}" y="${c.y+25}" class="arch-callout-kicker">${svgEsc(c.kicker)}</text>`+
+          cols+
+        `</g>`;
+      }
+      return '';
     }).join('');
-    $('#graph').innerHTML=svg;
-    $('#group-list').innerHTML=(mobile()?mobileGroups(groups):groups.map(g=>`<section class="list-group"><h3>${esc(g.title)} <small>${g.members.length}</small></h3>${g.members.map(id=>{const e=entity(id);return `<button class="list-item" data-node="${esc(id)}">${stateBadge(e.state)}<b>${esc(e.title)}</b><small>${esc(scopeLabel(e))} · ${esc(e.responsibility.role_type)}</small></button>`;}).join('')}</section>`).join(''))||'<p>沒有符合的模組，請調整搜尋。</p>';
-    $('#count').textContent=`${groups.length} 個概念群 · ${groups.reduce((n,g)=>n+g.members.length,0)} 項知識／模組`;
-    $('#match-count').textContent=$('#search').value?' · 搜尋已篩選':'';
-    $('#canvas').hidden=listMode;$('#group-list').hidden=!listMode;
-    $('#list-mode').textContent=listMode?'圖形畫布':'分群清單';$('#list-mode').setAttribute('aria-pressed',listMode);
-    $('#mode').textContent=expanded?'簡化分群':'展開模組';$('#mode').setAttribute('aria-pressed',expanded);
-    fit();highlight();
+    const pathsHtml=spec.wires.map(w=>{
+      const tone=w.tone||'forward';
+      const pillH=w.ph||(w.sub&&!isMobile?38:26);
+      const pillY=w.ly?w.ly-pillH/2:0;
+      const pillX=w.lx?w.lx-(w.pw||130)/2:0;
+      return `<g class="arch-wire-group ${tone}">`+
+        `<path class="architecture-wire ${tone}" d="${w.d}" marker-end="${markerFor(tone)}"/>`+
+        (w.label?`<g class="architecture-branch ${tone}">`+
+          `<rect x="${pillX}" y="${pillY}" width="${w.pw||130}" height="${pillH}" rx="${pillH/2}"/>`+
+          `<text x="${w.lx}" y="${w.sub&&!isMobile?pillY+13:w.ly}" text-anchor="middle" dominant-baseline="central" class="branch-main">${svgEsc(w.label)}</text>`+
+          (w.sub&&!isMobile?`<text x="${w.lx}" y="${pillY+28}" text-anchor="middle" dominant-baseline="central" class="branch-sub">${svgEsc(w.sub)}</text>`:'')+
+        `</g>`:'')+
+      `</g>`;
+    }).join('');
+    const nodesHtml=Object.entries(spec.boxes).map(([id,b])=>{
+      const {x,y,w,h,num,title,sub,variant,badge,numTop}=b;
+      const isOutcome=variant==='outcome';
+      const badgeW=badge?badge.length*11+18:0;
+      if(numTop){
+        return `<g class="node ${variant||'step'} ${isOutcome?'outcome':''}" data-arch-node="${id}">`+
+          `<rect class="node-card" x="${x}" y="${y}" width="${w}" height="${h}" rx="15"/>`+
+          `<line class="node-highlight" x1="${x+14}" y1="${y+1}" x2="${x+w-14}" y2="${y+1}"/>`+
+          `<rect class="node-num-bg" x="${x+12}" y="${y+10}" width="${num.length>2?36:28}" height="20" rx="6"/>`+
+          `<text class="node-num" x="${x+12+(num.length>2?18:14)}" y="${y+20}" text-anchor="middle" dominant-baseline="central">${svgEsc(num)}</text>`+
+          `<text class="node-title" x="${x+12}" y="${y+47}" dominant-baseline="central">${svgEsc(title)}</text>`+
+          `<text class="node-sub" x="${x+12}" y="${y+71}" dominant-baseline="central">${svgEsc(sub||'')}</text>`+
+        `</g>`;
+      }
+      return `<g class="node ${variant||'step'} ${isOutcome?'outcome':''}" data-arch-node="${id}">`+
+        `<rect class="node-card" x="${x}" y="${y}" width="${w}" height="${h}" rx="15"/>`+
+        `<line class="node-highlight" x1="${x+14}" y1="${y+1}" x2="${x+w-14}" y2="${y+1}"/>`+
+        `<rect class="node-num-bg" x="${x+12}" y="${y+13}" width="${num.length>2?36:28}" height="22" rx="7"/>`+
+        `<text class="node-num" x="${x+12+(num.length>2?18:14)}" y="${y+24}" text-anchor="middle" dominant-baseline="central">${svgEsc(num)}</text>`+
+        (badge?`<rect class="node-role-pill" x="${x+w-badgeW-10}" y="${y-10}" width="${badgeW}" height="20" rx="10"/><text class="node-role-text" x="${x+w-badgeW/2-10}" y="${y}" text-anchor="middle" dominant-baseline="central">${svgEsc(badge)}</text>`:'')+
+        `<text class="node-title" x="${x+(num.length>2?56:48)}" y="${y+24}" dominant-baseline="central">${svgEsc(title)}</text>`+
+        `<text class="node-sub" x="${x+14}" y="${y+51}" dominant-baseline="central">${svgEsc(sub||'')}</text>`+
+      `</g>`;
+    }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="presentation">`+
+      `<defs>`+
+        `<linearGradient id="arch-zone-base" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#071525" stop-opacity="0.88"/><stop offset="100%" stop-color="#040c16" stop-opacity="0.92"/></linearGradient>`+
+        `<linearGradient id="arch-zone-loop" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a2139" stop-opacity="0.92"/><stop offset="100%" stop-color="#051222" stop-opacity="0.95"/></linearGradient>`+
+        `<linearGradient id="arch-zone-out" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#072227" stop-opacity="0.88"/><stop offset="100%" stop-color="#041217" stop-opacity="0.94"/></linearGradient>`+
+        `<linearGradient id="arch-card-step" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#122f50"/><stop offset="100%" stop-color="#0b1f36"/></linearGradient>`+
+        `<linearGradient id="arch-card-planner" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#163b63"/><stop offset="100%" stop-color="#0d2642"/></linearGradient>`+
+        `<linearGradient id="arch-card-decision" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#17385c"/><stop offset="100%" stop-color="#0e243d"/></linearGradient>`+
+        `<linearGradient id="arch-card-limit" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2c2216"/><stop offset="100%" stop-color="#1b150e"/></linearGradient>`+
+        `<linearGradient id="arch-card-summary" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0e3345"/><stop offset="100%" stop-color="#092230"/></linearGradient>`+
+        `<linearGradient id="arch-card-outcome" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d3b36"/><stop offset="100%" stop-color="#072422"/></linearGradient>`+
+        `<marker id="arch-arrow" markerWidth="10" markerHeight="10" refX="8.5" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 1 L9 5 L0 9 L2.2 5 Z" fill="#89b8e0"/></marker>`+
+        `<marker id="arch-arrow-loop" markerWidth="10" markerHeight="10" refX="8.5" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 1 L9 5 L0 9 L2.2 5 Z" fill="#f5be6b"/></marker>`+
+        `<marker id="arch-arrow-ok" markerWidth="10" markerHeight="10" refX="8.5" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 1 L9 5 L0 9 L2.2 5 Z" fill="#5ce1b6"/></marker>`+
+        `<marker id="arch-arrow-limit" markerWidth="10" markerHeight="10" refX="8.5" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 1 L9 5 L0 9 L2.2 5 Z" fill="#e5a95c"/></marker>`+
+      `</defs>`+
+      zonesHtml+loopCourtHtml+calloutsHtml+pathsHtml+nodesHtml+
+    `</svg>`;
   }
-  function setCamera(){ $('#graph').setAttribute('viewBox',camera.join(' ')); }
-  function fit(){const r=$('#canvas').getBoundingClientRect();const aspect=(r.width||900)/(r.height||420);let w=bounds[0],h=bounds[1];if(w/h>aspect)h=w/aspect;else w=h*aspect;const maxW=(r.width||900)/.8;if(w>maxW){w=maxW;h=w/aspect;}camera=[Math.max(0,(bounds[0]-w)/2),0,w,h];setCamera();}
-  function zoom(f){const [x,y,w,h]=camera;camera=[x+w*(1-f)/2,y+h*(1-f)/2,Math.max(200,w*f),Math.max(160,h*f)];setCamera();}
-  function highlight(){
-    const related=new Set();const relatedEdges=new Set();
-    const target=!expanded&&entity(selected)?'group:'+entity(selected).group_id:selected;
-    if(selected){related.add(target);for(const e of edges)if(e.source===target||e.target===target||e.id===target){related.add(e.source);related.add(e.target);relatedEdges.add(e.id);}}
-    document.querySelectorAll('[data-node]').forEach(el=>{el.classList.toggle('selected',el.dataset.node===target||el.dataset.node===selected);el.classList.toggle('dim',!!selected&&!related.has(el.dataset.node)&&!listMode);});
-    document.querySelectorAll('[data-edge]').forEach(el=>{el.classList.toggle('selected',el.dataset.edge===selected);el.classList.toggle('dim',!!selected&&!relatedEdges.has(el.dataset.edge));});
+  let graphRenderToken=0,graphSize=null,mermaidReady=false;
+  function fit(){
+    if(viewName!=='architecture'||!graphSize)return;
+    const canvas=$('#canvas'),graph=$('#graph'),svg=graph.querySelector('svg');
+    if(!svg)return;
+    const r=canvas.getBoundingClientRect(),w=graphSize.width,h=graphSize.height;
+    if(!r.width)return;
+    if(mobile()){
+      const mScale=Math.max(0.78,Math.min(1.08,(r.width-8)/w));
+      graph.style.width=Math.round(w*mScale)+'px';
+      graph.style.height=Math.round(h*mScale)+'px';
+      svg.style.width='100%';svg.style.height='100%';svg.style.maxWidth='none';
+      return;
+    }
+    if(!r.height)return;
+    const scale=Math.min(1.35,(r.width-20)/w,(r.height-12)/h);
+    graph.style.width=Math.round(w*scale)+'px';
+    graph.style.height=Math.round(h*scale)+'px';
+    svg.style.width='100%';svg.style.height='100%';svg.style.maxWidth='none';
+  }
+  function highlight(){} // 其餘頁面沿用詳情狀態；展示圖不做節點高亮。
+  async function renderGraph(){
+    if(!data)return;
+    const token=++graphRenderToken;
+    const scope=$('#agent').value==='history'?'history':'action';
+    const scene=architectureScenes[scope];
+    const eyebrowEl=document.querySelector('.arch-eyebrow');
+    if(eyebrowEl&&scene.eyebrow)eyebrowEl.textContent=scene.eyebrow;
+    $('#graph-heading').textContent=scene.title;
+    $('#count').textContent=scene.caption;
+    const isMob=mobile();
+    const source=[
+      isMob?'flowchart TB':'flowchart LR',
+      ...scene.steps,
+      'classDef step fill:#0e2a49,stroke:#284b6a,color:#bddcf5,stroke-width:1.4px',
+      'classDef result fill:#09263e,stroke:#437498,color:#c8e8ff,stroke-width:1.6px',
+      'linkStyle default stroke:#8799a7,stroke-width:1.3px'
+    ].join('\n');
+    $('#graph').innerHTML=architectureShowcase(scope,source,isMob);
+    const box=$('#graph svg')?.viewBox?.baseVal;
+    graphSize={width:Math.max(200,box?.width||1400),height:Math.max(180,box?.height||544)};
+    if(viewName==='architecture')fit();
+    if(!window.PihMermaid)return;
+    try{
+      if(!mermaidReady){
+        window.PihMermaid.initialize({
+          startOnLoad:false,securityLevel:'strict',theme:'base',
+          themeVariables:{
+            background:'#020507',primaryColor:'#0e2a49',primaryTextColor:'#bddcf5',
+            primaryBorderColor:'#284b6a',lineColor:'#8799a7',
+            fontFamily:'PingFang TC, Noto Sans TC, sans-serif',fontSize:'19px'
+          },
+          flowchart:{htmlLabels:false,curve:'basis',nodeSpacing:64,rankSpacing:38,padding:18}
+        });
+        mermaidReady=true;
+      }
+      await window.PihMermaid.render('pih-simple-architecture-'+token,source);
+    }catch(err){
+      console.error('Mermaid 驗證略過',err);
+    }
   }
   const step=(n,title,body,open=false)=>`<details ${open?'open':''}><summary>${n}. ${title}</summary>${body}</details>`;
   const pair=(k,v)=>`<dt>${esc(k)}</dt><dd>${esc(txt(v))}</dd>`;
@@ -179,10 +500,10 @@
     if(ag==='action')return raw.filter(m=>m.agent_scope==='action'||m.agent_scope==='shared');
     return raw.filter(m=>m.agent_scope==='history'||m.agent_scope==='shared'||m.agent_scope==='unknown');
   };
-  const query=()=>$('#search').value.trim().toLowerCase();
-  const searchLogic=s=>!query()||txt(s).toLowerCase().includes(query());
-  // Split raw text on the query and escape each piece, so highlighting never breaks HTML entities.
-  const hl=v=>{const s=String(v??''),q=query();if(!q)return esc(s);const lower=s.toLowerCase();let out='',i=0,j;while((j=lower.indexOf(q,i))!==-1){out+=esc(s.slice(i,j))+'<mark>'+esc(s.slice(j,j+q.length))+'</mark>';i=j+q.length;}return out+esc(s.slice(i));};
+  // 搜尋已停用；所有現有紀錄直接呈現，原本的分類與狀態切換保留。
+  const query=()=>'';
+  const searchLogic=()=>true;
+  const hl=v=>esc(v);
   const currentMaterial=()=>logicMaterials().find(m=>m.id===logicId);
   const valueBlock=(title,values,cls='')=>`<section class="io-block ${cls}"><h4>${esc(title)}</h4>${values?.filter(Boolean).length?values.filter(Boolean).map(v=>`<p>${hl(v)}</p>`).join(''):'<p class="logic-unknown">尚無紀錄</p>'}</section>`;
   const confidencePill=s=>s?.step_confidence==='documented'?'<span class="pill green">有來源紀錄</span>':'<span class="pill amber">來源不完整</span>';
@@ -232,17 +553,80 @@
   function renderTrackBar(){
     const lg=logicData(),ag=$('#agent')?.value==='history'?'history':'action';
     const filterScope=list=>(list||[]).filter(m=>ag==='action'?(m.agent_scope==='action'||m.agent_scope==='shared'):(m.agent_scope==='history'||m.agent_scope==='shared'||m.agent_scope==='unknown'));
-    const c=filterScope(lg.cases)[0],workflows=filterScope(lg.workflows),w=workflows.find(w=>w.id==='mvp_action_workflow'&&ag==='action')||workflows[0],syn=lg.synthetic_examples||[];
+    const c=filterScope(lg.cases)[0],workflows=filterScope(lg.workflows),w=workflows.find(w=>w.id==='mvp_action_workflow'&&ag==='action')||workflows[0];
     const curType=$('#logic-type')?.value||'case_report';
-    const synNotice=lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE;
-    const cSteps=c?.steps?.length??0,wSteps=w?.steps?.length??0;
     const tracks=[
-      {type:'case_report',id:c?.id||'',label:c?`📋 開發案例：重複修機異常調查（${cSteps} 步）`:'📋 此範圍尚無已整理案例',active:curType==='case_report',title:c?.title||'開發案例紀錄'},
-      {type:'design_workflow',id:w?.id||'',label:`🔄 ${w?.id==='mvp_action_workflow'?'MVP 行動型設計流程':'Agent 設計流程'}（${wSteps} 步）`,active:curType==='design_workflow',title:w?.title||'Agent 設計流程'},
-      {type:'synthetic_example',id:'',label:`💡 教學示例（${syn.length} · 暫無合成資料）`,active:curType==='synthetic_example',title:synNotice}
+      ...(w?[{type:'design_workflow',id:w.id,label:'運作流程',active:curType==='design_workflow',title:w.title}]:[]),
+      ...(c?[{type:'case_report',id:c.id,label:'實際案例紀錄',active:curType==='case_report',title:c.title}]:[])
     ];
     const bar=$('#logic-tracks');
-    if(bar)bar.innerHTML=tracks.map(t=>`<button type="button" class="track-pill ${t.active?'active':''}" role="tab" aria-selected="${t.active}" data-logic-track="${esc(t.type)}" data-material-id="${esc(t.id)}" title="${esc(t.title)}">${esc(t.label)}</button>`).join('');
+    if(bar){
+      bar.innerHTML=tracks.map(t=>`<button type="button" class="track-pill ${t.active?'active':''}" role="tab" aria-selected="${t.active}" data-logic-track="${esc(t.type)}" data-material-id="${esc(t.id)}" title="${esc(t.title)}">${esc(t.label)}</button>`).join('');
+      bar.hidden=tracks.length<2;
+    }
+  }
+  const logicSimpleTitles={
+    '載入一次與觸發入口':'開啟畫面，準備開始分析',
+    '讀取共用 Snapshot':'取得 Dashboard 的即時資料',
+    '整理異常與合併事件':'找出異常，合併重複事件',
+    'Normal／Debug 邊界待確認':'不同分析模式尚未確認',
+    '白名單固定不動作':'確認哪些異常不需要處理',
+    '針對異常提出下一步':'AI 提出下一步與理由',
+    '呈現事件、下一步與原因':'在 Dashboard 顯示結果',
+    '人員判斷與獨立盲測':'由人員判斷是否採用',
+    '深入調查全部 Candidate':'查閱異常的歷史資料',
+    'Evidence 分析與程式驗證':'檢查分析是否有證據',
+    'Briefing 與 Dashboard 結果交付':'將分析摘要送到畫面',
+    '提出優先處理建議':'提醒哪些問題需要優先注意',
+    '核心假設':'先提出可能原因','支持證據':'找支持這個想法的資料',
+    '反面證據':'找出與想法矛盾的資料',
+    '四大根因評估（人・機・料・法）':'從人、設備、材料與方法檢查',
+    '未知與待查缺口':'列出還缺哪些資料','結論與下一步':'整理結論與後續確認事項'
+  };
+  const logicSimpleSummaries={
+    '載入一次與觸發入口':'規劃在開啟畫面時開始分析一次；真正啟動分析工作的連接還要驗證。',
+    '讀取共用 Snapshot':'預計使用 Dashboard 同一份即時資料；是否已成功接入還要確認。',
+    '整理異常與合併事件':'同一件異常合併呈現，同機台不同的異常仍分開保留。',
+    'Normal／Debug 邊界待確認':'資料還無法證明這個版本有兩種分析模式；不能把它當成已存在的流程。',
+    '白名單固定不動作':'符合白名單的異常仍會顯示，但固定標示「不動作」，其他異常照常分析。',
+    '針對異常提出下一步':'AI 根據本次資料提出建議與原因，不自行編造現場資訊，也不直接操作設備。',
+    '呈現事件、下一步與原因':'目標是在畫面顯示異常、建議和原因，並減少重複文字；完整畫面仍待驗證。',
+    '人員判斷與獨立盲測':'由現場人員決定是否採用，並分別回答後再比較；不會自動派工。',
+    '深入調查全部 Candidate':'根據異常類型查歷史紀錄。重複修機已有真實案例，但不是所有異常都完成深入調查。',
+    'Evidence 分析與程式驗證':'對分析內容、數字和歷史資料做檢查；證據不足就不能當成已確認原因。',
+    'Briefing 與 Dashboard 結果交付':'已有後端分析成功的回報；完整畫面顯示與前後端一致性仍待驗證。',
+    '提出優先處理建議':'整理需要注意的問題及優先程度，不會自動給出派工、停機或更換零件指令。'
+  };
+  const logicUncertain=s=>/Normal／Debug 邊界待確認/.test(s.title||'');
+  const logicStorySummary=s=>{
+    const original=String(s.plain_summary||'').trim().replace(/\s+/g,' ');
+    return logicSimpleSummaries[s.title]||((original.length>145?original.slice(0,142).replace(/[，、；\s]+$/,'')+'…':original)||'目前沒有足夠記錄說明這一步。');
+  };
+  let logicSelectedId=null;
+  const logicRoleShort={python_rule:'程式規則',llm_reasoning:'AI 判斷',tool_query:'資料查詢',db_snapshot:'資料來源',ui_interaction:'畫面呈現',human:'現場人員'};
+  function logicStepDetail(s,flow,idx,isCase){
+    const currentTitle=logicSimpleTitles[s.title]||s.title;
+    const role=logicRoleShort[s.actor_role];
+    const prev=flow[idx-1],next=flow[idx+1];
+    const neighbors=`<div class="flow-neighbors">${prev?`<button type="button" data-flow-step="${esc(prev.step_id)}" aria-label="選擇上一個步驟">← ${esc(logicSimpleTitles[prev.title]||prev.title)}</button>`:'<span>流程起點</span>'}${next?`<button type="button" data-flow-step="${esc(next.step_id)}" aria-label="選擇下一個步驟">${esc(logicSimpleTitles[next.title]||next.title)} →</button>`:'<span>流程終點</span>'}</div>`;
+    return `<div class="flow-detail-inner"><div class="flow-detail-kicker">第 ${idx+1} 步／共 ${flow.length} 步${role?` · ${esc(role)}`:''}</div><h3>${esc(currentTitle)}</h3><p class="flow-detail-lead">${esc(logicStorySummary(s))}</p><p class="flow-detail-note">${isCase?'依已保存的案例紀錄整理，不代表故障原因已確認。':'依開發紀錄整理的設計說明，並非即時執行結果。'}</p><details class="story-tech" data-story-step="${esc(s.step_id)}"><summary>技術細節與來源證據</summary><div class="story-tech-body"></div></details>${neighbors}</div>`;
+  }
+  function logicStoryPage(m,steps,materials){
+    const isCase=m.material_type==='case_report';
+    const uncertain=steps.filter(logicUncertain),flow=steps.filter(s=>!logicUncertain(s));
+    const label=$('#agent').value==='history'?'歷史調查型':'MVP 行動型';
+    const headline=isCase?'這個案例如何判斷？':label+'怎麼運作？';
+    if(!flow.some(s=>s.step_id===logicSelectedId))logicSelectedId=mobile()?null:flow[0]?.step_id||null;
+    const active=flow.findIndex(s=>s.step_id===logicSelectedId);
+    const entries=flow.map((s,i)=>{
+      const chosen=s.step_id===logicSelectedId;
+      const title=logicSimpleTitles[s.title]||s.title;
+      return `<div class="flow-node-wrap"><button type="button" class="flow-node ${chosen?'is-selected':''}" data-flow-step="${esc(s.step_id)}" aria-pressed="${chosen}" aria-expanded="${chosen}" aria-controls="flow-mobile-detail-${i}"><span class="flow-node-number">${i+1}</span><span class="flow-node-title">${esc(title)}</span><span class="flow-node-caret" aria-hidden="true">${chosen?'●':'›'}</span></button><div class="flow-mobile-inspector ${chosen?'is-selected':''}" id="flow-mobile-detail-${i}" ${chosen?'':'hidden'}>${chosen?logicStepDetail(s,flow,i,isCase):''}</div></div>`;
+    }).join('');
+    const gap=uncertain.length?`<details class="story-unknown"><summary>尚未確認（${uncertain.length} 項）</summary><div class="story-unknown-body">${uncertain.map(s=>`<p><b>${esc(logicSimpleTitles[s.title]||s.title)}：</b>${esc(logicStorySummary(s))}</p><details class="story-tech" data-story-step="${esc(s.step_id)}"><summary>查看來源紀錄</summary><div class="story-tech-body"></div></details>`).join('')}</div></details>`:'';
+    const more=materials.length>1?`<details class="story-more"><summary>查看其他流程紀錄</summary><label>選擇來源<select data-story-material>${materials.map(a=>`<option value="${esc(a.id)}" ${a.id===m.id?'selected':''}>${esc(a.title)}</option>`).join('')}</select></label></details>`:'';
+    const caseInfo=isCase?`<details class="story-more" data-story-case><summary>查看案例的證據與結論</summary><div class="story-case-body"></div></details>`:'';
+    return `<div class="story-page"><div class="story-intro"><h2>${esc(headline)}</h2><p>點選流程節點，查看這一步的說明。${isCase?'案例結論仍需對照證據。':'這是設計流程，不代表全部完成驗收。'}</p></div><div class="flow-workspace"><section class="flow-map" aria-label="互動流程圖"><div class="flow-map-heading"><b>完整流程</b><small>${flow.length} 個步驟 · 依紀錄的閱讀順序</small></div><div class="flow-nodes">${entries||'<p>目前沒有足夠紀錄可以畫出流程。</p>'}</div></section><section id="flow-detail" class="flow-desktop-inspector" aria-label="目前選取的步驟">${active>=0?logicStepDetail(flow[active],flow,active,isCase):'<p>點選流程步驟查看說明。</p>'}</section></div><div class="flow-extras">${gap}${caseInfo}${more}</div></div>`;
   }
   function syncLogicDrawer(s,m){
     if(viewName!=='logic'||!s)return;
@@ -251,46 +635,29 @@
     const ref=s.evidence_refs?.[0]||m?.evidence_refs?.[0];
     if(ref){sourceDrawer(ref,null,false,true);highlightLogicChips(null,s.step_id,0);}
   }
-  function filteredSteps(m){return m?.steps?.filter(s=>searchLogic([s,m.title,m.hypothesis,m.support,m.counter_evidence,m.unknowns,m.cause_assessments]))||[];}
+  function filteredSteps(m){return m?.steps||[];}
   function renderLogic(){
     if(!data)return;
-    renderTrackBar();
+    // 閱讀模式：先給完整且易懂的流程，欄位、工具、來源只在點開時載入。
     const lg=logicData();
+    if($('#logic-type').value==='synthetic_example')$('#logic-type').value='design_workflow';
+    if($('#agent').value==='action')$('#logic-type').value='design_workflow';
     const all=logicMaterials();
-    const materials=all.filter(m=>searchLogic([m.title,m.steps,m.hypothesis,m.support,m.counter_evidence,m.unknowns,m.cause_assessments,m.assessment_context]));
+    const materials=all;
     if(!materials.some(m=>m.id===logicId)){logicId=materials[0]?.id||null;logicIndex=0;}
+    renderTrackBar();
     $('#logic-material').innerHTML=materials.map(m=>`<option value="${esc(m.id)}">[${materialLabel(m)}] ${esc(m.title)}</option>`).join('')||'<option value="">沒有符合的來源</option>';
     $('#logic-material').value=logicId||'';
-    $('.logic-selects').hidden=!($('#agent').value!=='action'&&materials.length>1);
+    $('.logic-selects').hidden=true;
     const m=currentMaterial();let steps=filteredSteps(m);
     // A material can match via case-level fields only; then keep every step readable.
     if(m&&!steps.length)steps=m.steps||[];
-    logicIndex=Math.min(Math.max(logicIndex,0),Math.max(steps.length-1,0));
-    $('#logic-first').disabled=$('#logic-prev').disabled=!steps.length||logicIndex===0||logicAll;
-    $('#logic-next').disabled=!steps.length||logicIndex===steps.length-1||logicAll;
-    $('#logic-all').disabled=!steps.length;$('#logic-all').setAttribute('aria-pressed',logicAll);$('#logic-all').textContent=logicAll?'聚焦單一步驟':'展開全部步驟';
-    const filtered=m&&steps.length<(m.steps?.length||0);
-    $('#logic-position').textContent=!steps.length?'沒有可讀步驟':logicAll?`全部 ${steps.length} 步`:`${logicIndex+1} / ${steps.length}`;
-    $('#logic-search-note').textContent=query()?(filtered?`搜尋篩選：${steps.length} / ${m.steps.length} 個步驟符合`:m?'符合搜尋條件':'找不到符合項目'):'';
-    const last=steps[steps.length-1];
-    $('#logic-rail').innerHTML=steps.map((s,i)=>`<div class="rail-entry"><button class="${s.step_confidence==='documented'?'documented':'partial'}" data-logic-step="${i}" ${i===logicIndex&&!logicAll?'aria-current="step"':''} title="${esc(s.title)}"><span>${String(s.ordinal).padStart(2,'0')}</span><em>${hl(s.title)}</em></button>${i<steps.length-1||s.next_step_status!=='data_cutoff'?`<div class="rail-link ${s.next_step_status==='connected'?'confirmed':'partial'}">${linkLabel(s)}</div>`:''}</div>`).join('')+
-      (last&&last.next_step_status==='data_cutoff'?'<div class="rail-entry"><div class="rail-break" role="note">⚠ 後續未取得資料</div></div>':'');
-    syncMobileLogic(steps);
-    if(!m||!steps.length){
-      const ag=$('#agent').value==='history'?'history':'action';
-      const otherAg=ag==='action'?'history':'action';
-      const otherLabel=ag==='action'?'歷史調查型':'MVP 行動型';
-      const hasQuery=Boolean(query());
-      $('#logic-content').innerHTML=`<div class="logic-empty"><h2>找不到符合的流程</h2><p>請切換 Agent 或清除搜尋。</p><p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p><div class="logic-empty-actions">${hasQuery?`<button type="button" class="logic-reset-scope" data-clear-search="1">↺ 清除搜尋</button>`:''}<button type="button" class="logic-switch-agent" data-switch-agent="${otherAg}">⇄ 切換至「${otherLabel}」</button></div></div>`;
-      return;
-    }
-    const shown=logicAll?steps:[steps[logicIndex]];
-    const atEnd=logicAll||logicIndex===steps.length-1;
-    const qList=lg.query_abilities||[],relList=m.documented_relationships||[];
-    $('#logic-content').innerHTML=`<div class="material-heading"><div class="material-heading-top"><span class="pill purple">${materialLabel(m)}</span><span class="pill amber">只有部分紀錄</span><span class="pill gray">${esc(scopeLabel(m))}</span><h2>${hl(m.title)}</h2></div><p>${esc(m.ordering_basis)}${m.scope_basis?` · ${esc(m.scope_basis)}`:''}</p></div>`+
-      shown.map(s=>logicCard(s)).join('')+(atEnd&&last.next_step_status==='data_cutoff'?breakpoint():'')+
-      (m.material_type==='case_report'?casePanel(m):`<details class="logic-context-accordion query-background"><summary>📂 其他參考資料（${qList.length} 項查詢能力 · ${relList.length} 項架構關係）</summary><h4>已有查詢功能</h4>${qList.map(q=>`<article><h3>${hl(q.title)}</h3><p>${hl(q.description)}</p><small>${esc(q.source)} · ${esc(q.evidence_type)} · ${esc(q.usage_status)} · ${esc(q.source_record)}</small></article>`).join('')||'<p>來源未記載</p>'}<h4>相關架構</h4>${relList.map(r=>`<p>${esc(entity(r.source)?.title)} → ${esc(entity(r.target)?.title)}：${esc(r.label)}</p>`).join('')||'<p>尚無相關架構紀錄。</p>'}<p class="io-basis">${esc(lg.synthetic_notice||DEFAULT_SYNTHETIC_NOTICE)}</p></details>`);
-    syncLogicDrawer(steps[logicIndex]||steps[0],m);
+    $('#logic-rail').hidden=true;
+    $('.logic-navigation').hidden=true;
+    $('#logic-synthetic-toast').hidden=true;
+    $('#thumb-bar').hidden=true;
+    $('#step-picker').hidden=true;
+    $('#logic-content').innerHTML=m?logicStoryPage(m,steps,materials):'<div class="logic-empty"><h2>目前沒有可用流程</h2><p>請切換上方 Agent 範圍。</p></div>';
   }
   function moveLogic(index){$('#step-picker').hidden=true;$('#thumb-position').setAttribute('aria-expanded','false');logicAll=false;logicIndex=index;renderLogic();$('#logic-content').scrollTop=0;$('#logic-rail [aria-current]')?.scrollIntoView({block:'nearest',inline:mobile()?'center':'nearest',behavior:mobile()&&!matchMedia('(prefers-reduced-motion:reduce)').matches?'smooth':'instant'});}
   function logicSource(stepId,index,sourceButton){
@@ -311,6 +678,44 @@
   }
   $('#logic-type').addEventListener('change',()=>{const t=$('#logic-type').value;if(t!=='synthetic_example')$('#logic-synthetic-toast').hidden=true;logicId=null;logicIndex=0;logicAll=false;renderLogic();});
   $('#logic-material').addEventListener('change',()=>{logicId=$('#logic-material').value;logicIndex=0;logicAll=false;renderLogic();});
+  document.addEventListener('change',ev=>{
+    const sel=ev.target.closest?.('[data-story-material]');
+    if(!sel)return;
+    logicId=sel.value;logicIndex=0;logicSelectedId=null;renderLogic();$('#logic-content').scrollTop=0;
+  });
+  document.addEventListener('click',ev=>{
+    const btn=ev.target.closest?.('[data-flow-step]');
+    if(!btn||viewName!=='logic')return;
+    const was=logicSelectedId;
+    logicSelectedId=btn.dataset.flowStep;
+    if(logicSelectedId===was&&btn.closest('.flow-node-wrap')&&mobile()){
+      // 手機版重點選同一步時可關閉內容，保持全流程清楚。
+      const wrap=btn.closest('.flow-node-wrap');
+      const inspector=wrap.querySelector('.flow-mobile-inspector');
+      inspector.hidden=!inspector.hidden;
+      btn.setAttribute('aria-expanded',String(!inspector.hidden));
+      return;
+    }
+    renderLogic();
+    const chosen=$('#logic-content .flow-node.is-selected');
+    if(chosen)chosen.setAttribute('aria-expanded','true');
+    if(mobile()&&chosen)chosen.scrollIntoView({block:'nearest',behavior:'instant'});
+  });
+  document.addEventListener('toggle',ev=>{
+    const details=ev.target;
+    if(viewName!=='logic'||!details?.open||details.dataset.loaded)return;
+    if(details.matches?.('[data-story-step]')){
+      const s=currentMaterial()?.steps?.find(x=>x.step_id===details.dataset.storyStep);
+      if(!s)return;
+      details.querySelector('.story-tech-body').innerHTML=logicCard(s);
+      details.dataset.loaded='true';
+    }else if(details.matches?.('[data-story-case]')){
+      const m=currentMaterial();
+      if(!m||m.material_type!=='case_report')return;
+      details.querySelector('.story-case-body').innerHTML=casePanel(m);
+      details.dataset.loaded='true';
+    }
+  },true);
   document.addEventListener('click',ev=>{
     const el=ev.target.closest('[data-logic-track],[data-reset-scope],[data-clear-search],[data-switch-agent],[data-logic-step],[data-logic-source],#logic-first,#logic-prev,#logic-next,#logic-all');if(!el)return;
     if(el.dataset.logicTrack){
@@ -327,20 +732,8 @@
       logicId=el.dataset.materialId||null;logicIndex=0;logicAll=false;renderLogic();
       return;
     }
-    if(el.dataset.clearSearch){
-      $('#search').value='';
-      $('#logic-synthetic-toast').hidden=true;
-      renderLogic();
-      return;
-    }
     if(el.dataset.switchAgent){
       setAgent(el.dataset.switchAgent);
-      return;
-    }
-    if(el.dataset.resetScope){
-      $('#search').value='';
-      $('#logic-synthetic-toast').hidden=true;
-      renderLogic();
       return;
     }
     if(el.dataset.logicStep!==undefined)moveLogic(Number(el.dataset.logicStep));
@@ -359,6 +752,11 @@
   });
   // ---- Progress 進度視角：依來源重建的開發與驗收追蹤，非 Runtime 健康度。不計算完成率、無自動刷新或動畫。 ----
   let progressView='board',progressFilter='all';
+  // 待辦直接使用目前功能結案資料；不另存工作清單，也不透過 LLM 猜測優先級。
+  const progressTabs=document.querySelector('#progress-panel .progress-tabs');
+  if(progressTabs&&!progressTabs.querySelector('[data-progress-view="next"]')){
+    progressTabs.insertAdjacentHTML('beforeend','<button type="button" data-progress-view="next" aria-pressed="false">下一步</button>');
+  }
   // 後端若尚未提供 progress（前後端版本短暫不同步），全部以 Optional Chaining 與預設值降級，不拋出 TypeError。
   const progressData=()=>data?.progress||null;
   const FALLBACK_STATUS={verified:['獨立驗證','evidence'],supported:['來源支持','evidence'],partial:['部分證據','pending'],claimed:['僅宣告／回報','pending'],design_only:['設計／規劃','pending'],unresolved:['未解問題','red'],unknown:['未知','pending'],superseded:['已被取代','pending']};
@@ -374,7 +772,7 @@
     if(progressFilter==='data_gaps')return false;
     return statusMeta(status).filter===progressFilter;
   };
-  const pMatch=(o,status)=>searchLogic([o.title,o.plain_summary,o.status_basis,o.basis,o.why,o.description,o.result,o.detail,o.reason,o.next_step,o.missing_evidence,o.implementation,o.validation,o.limits,o.io,o.kind,statusMeta(status).label].filter(x=>x!=null));
+  const pMatch=()=>true;
   const emptyNote='<div class="p-zero-result"><p class="logic-unknown">⚠️ 目前篩選結果：0 項符合</p><p class="io-basis">點擊下方按鈕或上方已選取的卡片，即可恢復完整總覽。</p><button type="button" class="p-reset-btn" data-progress-reset="1">↺ 顯示全部</button></div>';
   const section=(title,count,body,note='')=>`<section class="p-section"><h2>${esc(title)} <small>${count} 項</small></h2>${note?`<p class="io-basis">${esc(note)}</p>`:''}${body||emptyNote}</section>`;
   // 事件型來源：由實體既有證據取回完整事件，不在 progress 內重複儲存。
@@ -590,7 +988,7 @@
   };
   let closureFilter='all',reviewAuthenticated=false,reviewEnabled=false;
   const closureData=()=>data?.progress?.closure;
-  const closureMatch=i=>!query()||JSON.stringify([i.title,i.acceptance_scope,i.decision_reason,closureExplain(i)]).toLowerCase().includes(query());
+  const closureMatch=()=>true;
   // 只顯示可撤銷的人工作業；機器判斷的結案與未解問題不允許一鍵覆蓋。
   const canReopen=i=>i&&['CLOSED_REPORTED','NEEDS_FIX'].includes(i.development_status)&&['accept','reject'].includes(i.manual_decision)&&['user_acceptance','user_review'].includes(i.closure_basis);
   async function refreshClosure(){
@@ -627,6 +1025,27 @@
     }).join('');
     $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
   }
+  const nextStages=[
+    {status:'NEEDS_FIX',title:'先修正',desc:'已有未解問題，修正後再驗證。',tone:'red',action:'查看問題'},
+    {status:'NEEDS_USER_REVIEW',title:'等你驗證',desc:'已有交付內容，等待人工確認。',tone:'amber',action:'前往驗證'},
+    {status:'PENDING_REPORT',title:'等待完成回報',desc:'先補完成紀錄，再安排驗證。',tone:'blue',action:'查看紀錄'}
+  ];
+  function nextStepsView(p){
+    const all=p?.closure?.items||[];
+    const active=all.filter(i=>nextStages.some(s=>s.status===i.development_status));
+    const results=active.filter(closureMatch);
+    const sections=nextStages.map(s=>{
+      const items=results.filter(i=>i.development_status===s.status).sort((a,b)=>a.title.localeCompare(b.title,'zh-Hant'));
+      if(!items.length)return '';
+      return `<section class="next-stage"><h2><span class="pill ${s.tone}">${s.title}</span><small>${items.length} 項</small></h2><p class="next-stage-desc">${s.desc}</p><div class="next-list">${items.map(i=>{
+        const g=closureExplain(i);
+        return `<article class="next-item"><div><h3>${esc(g.title)}</h3><p>${esc(g.purpose)}</p><small>${esc(g.check)}</small></div><button type="button" data-next-open="${esc(i.item_id)}">${s.action} ↗</button></article>`;
+      }).join('')}</div></section>`;
+    }).join('');
+    const counts=nextStages.map(s=>`<span>${s.title} <b>${active.filter(i=>i.development_status===s.status).length}</b></span>`).join('');
+    $('#progress-note').textContent=query()?`符合搜尋：${results.length} 項`:'';
+    $('#progress-content').innerHTML=`<div class="next-head"><h2>下一步 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">依目前狀態分組，不是 AI 推測的開發順序。資料沒有明確的阻塞依賴關係，不自行判定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}`;
+  }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
     origin=button;selected=null;
@@ -646,6 +1065,7 @@
   }
   document.addEventListener('click',e=>{
     const verify=e.target.closest('[data-closure-verify]');if(verify){closureDetail(verify.dataset.closureVerify,verify);return;}
+    const next=e.target.closest('[data-next-open]');if(next){closureDetail(next.dataset.nextOpen,next);return;}
     const filter=e.target.closest('[data-closure-filter]');if(filter){closureFilter=closureFilter===filter.dataset.closureFilter?'all':filter.dataset.closureFilter;progressView='board';renderProgress();}
     const item=e.target.closest('[data-closure-item]');if(item)closureDetail(item.dataset.closureItem,item);
   });
@@ -687,13 +1107,14 @@
       $('#progress-content').innerHTML='<div class="logic-empty"><h2>目前沒有進度資料</h2><p>請重新整理。</p></div>';
       return;
     }
+    if(progressView==='next'){nextStepsView(p);return;}
     if(p.closure&&progressView==='board'){closureBoard();return;}
     const view=progressView==='skills'?skillsView(p):progressView==='gaps'?gapsView(p):boardView(p);
     const filterLabel=CARD_FILTERS[progressFilter]||'全部';
     if(view.shown===0){
-      $('#progress-note').textContent=`${query()?`搜尋「${$('#search').value.trim()}」· `:''}目前篩選結果：0（篩選「${filterLabel}」）`;
-    }else if(progressFilter!=='all'||query()){
-      $('#progress-note').textContent=`${query()?`搜尋「${$('#search').value.trim()}」· `:''}目前篩選「${filterLabel}」· 共 ${view.shown} 項符合`;
+      $('#progress-note').textContent=`目前篩選結果：0（篩選「${filterLabel}」）`;
+    }else if(progressFilter!=='all'){
+      $('#progress-note').textContent=`目前篩選「${filterLabel}」· 共 ${view.shown} 項符合`;
     }else{
       $('#progress-note').textContent='';
     }
@@ -724,11 +1145,94 @@
     if(el.dataset.progressSource)progressSource(el.dataset.progressSource,el);
   });
   // ---- Evolution 演進視角：依對話與知識版本重建的設計演進史，非系統執行日誌。 ----
-  let evoView='timeline',evoIndex=0,evoAll=false;
+  let evoView='timeline',evoIndex=0,evoAll=false,evoChangesOnly=false;
   const evoData=()=>data?.evolution||null;
   const evoPrecisionLabel={timestamp:'時間已確認',day:'僅知日期',free_text:'年份未確認',unknown:'時間未知'};
   const evoChangeTone={added:'green',updated:'blue',status_changed:'amber',superseded:'purple'};
   const evoShiftTone={superseded:'purple',status_shift:'amber',iterative_refinement:'blue'};
+  // 開發日誌只重排、白話化現有來源文字；不可用演進紀錄推斷功能已驗收。
+  const journalWords=[
+    [/Snapshot/gi,'即時資料整理'],[/Highlights/gi,'異常重點'],[/Candidates?/gi,'待調查項目'],
+    [/\bJob\b/gi,'分析工作'],[/\bScope\b/gi,'分析範圍'],[/\bE2E\b/gi,'完整流程'],
+    [/\bMock\b/gi,'模擬測試'],[/\bparity\b/gi,'結果一致性'],[/\bTool\b/gi,'查詢工具'],
+    [/\bpassed\b/gi,'通過'],[/\bskipped\b/gi,'略過'],[/\bfailed\b/gi,'失敗'],
+    [/\bEmail Approval\b/gi,'郵件審核'],[/\bDashboard Alignment\b/gi,'畫面資料比對'],
+    [/\bReplay\b/gi,'重播比對'],[/\bBriefing\b/gi,'分析摘要']
+  ];
+  const journalText=v=>{
+    let s=String(v||'').trim();
+    for(const [from,to] of journalWords)s=s.replace(from,to);
+    return s.replace(/\s+/g,' ').trim();
+  };
+  const journalNames=[
+    [/^程式依 (?:Highlights|異常重點) 找異常$/,'AI 怎麼找出異常'],
+    [/^Evidence 分析與程式驗證$/,'確認 AI 的分析有證據'],
+    [/^載入一次策略已確認$/,'AI 何時開始分析'],
+    [/^Highlights 與最終判斷不一致$/,'找到的異常與最後結論對不上'],
+    [/^Snapshot 與首次觸發 A 方案$/,'開啟畫面時才開始分析'],
+    [/^Snapshot 建立與刷新時序$/,'什麼時候整理即時資料'],
+    [/^Worker／SSE 與 API 共存$/,'分析時間較長時，畫面怎麼顯示進度']
+  ];
+  const journalTitle=v=>{
+    const s=String(v||'').trim();
+    for(const [p,replacement] of journalNames)if(p.test(s))return replacement;
+    return journalText(s);
+  };
+  const journalDescription=c=>{
+    const s=String(c?.description||'');
+    if(s.startsWith('新版六項 MVP Mock 已通過；真實 Job 有 19 Highlights → 13 Candidates')){
+      return '六項模擬測試已通過。真實資料曾找出 19 個異常重點，整理成 13 個待調查項目；完整流程還要驗證。';
+    }
+    if(s.startsWith('主要回合最多5、Structured Claim類型44種')){
+      return 'AI 分析已有證據與數字的檢查規則，包括異常原因、歷史資料和是否重複發生；完整情境仍要驗證。';
+    }
+    if(s.startsWith('使用者最新確認：沒有五分鐘自動刷新')){
+      return '執行方式已確認：開啟畫面時分析一次，不會每五分鐘自動重新分析。';
+    }
+    return journalShort(s||'這項內容有更新，詳細情況請看來源紀錄。');
+  };
+  const journalShort=(v,n=125)=>{
+    const s=journalText(v);
+    if(s.length<=n)return s;
+    const sentences=s.match(/[^。！？]+[。！？]?/g)||[s];
+    const first=sentences[0]?.trim()||'';
+    return first.length<=n&&first.length>=14?first:first.slice(0,n).replace(/[，、；\s]+$/,'')+'…';
+  };
+  const journalStatus={
+    needs_validation:'還要驗證',in_progress:'仍在處理',planned:'還在規劃',reported_implemented:'回報已實作',
+    reported:'已有回報',achieved:'已確認完成',implemented:'回報已實作',
+    deprecated:'已停用',superseded:'已被新方案取代',paused:'暫緩'
+  };
+  const journalChanges=b=>{
+    const current=new Map();
+    for(const c of b.entity_changes||[]){
+      const key=c.entity_id||c.native_id||c.title;
+      if(!current.has(key)||Number(c.sequence||0)>Number(current.get(key).sequence||0))current.set(key,c);
+    }
+    // 既有測試批次、舊原型與同日反覆改版保留在「其他更新」，不擠掉主要開發事項。
+    const priority=c=>{
+      const title=String(c.title||''),desc=String(c.description||'');
+      let n=({needs_validation:5,in_progress:4,planned:3,reported_implemented:2,reported:1})[c.status]||0;
+      if(/測試|驗證|異常|修機|載入|調查|資料|建議|流程|交付/.test(title))n+=2;
+      if(/^(舊|bt[-－]|Dashboard子測試|Agent子測試|前端meAgent|後端Agent)/i.test(title)||/\b(?:passed|skipped|failed)\b/i.test(title))n-=12;
+      if(/^(\d+\s*passed|既有測試批次回報)/i.test(desc))n-=8;
+      if(/詳細成果、模式與驗收缺口見相關能力/.test(desc))n-=4;
+      return n;
+    };
+    return [...current.values()].sort((a,b)=>priority(b)-priority(a)||Number(b.sequence||0)-Number(a.sequence||0));
+  };
+  function journalEntry(b,idx){
+    const items=journalChanges(b);
+    const title=journalTitle(b.lead_title||b.title||'開發紀錄');
+    const latest=idx===0;
+    const notable=items.slice(0,3);
+    const summaries=notable.map(c=>`<li><b>${esc(journalTitle(c.title))}</b><span>${esc(journalDescription(c))}</span>${journalStatus[c.status]?`<em>${esc(journalStatus[c.status])}</em>`:''}</li>`).join('');
+    const more=items.length>3?`<details class="journal-more"><summary>其餘 ${items.length-3} 項紀錄</summary><ul>${items.slice(3).map(c=>`<li><button type="button" data-jump="${esc(c.entity_id)}">${esc(journalText(c.title))} ↗</button><span>${esc(journalShort(c.description,95))}</span></li>`).join('')}</ul></details>`:'';
+    const sourceDetails=items.length?`<details class="journal-source" data-journal-source="${esc(b.batch_id)}"><summary>查看來源與完整修改內容</summary><div class="journal-source-target"></div></details>`:'';
+    const description=items.length?`<ul class="journal-key-points">${summaries}</ul>${more}`:
+      `<p class="journal-no-detail">這天有開發紀錄，但目前的公開資料沒有足夠內容說明具體改動。</p>`;
+    return `<article class="journal-day" data-journal-date="${esc(b.batch_id)}"><details ${latest?'open':''}><summary><span class="journal-date">${esc(b.date_label)}</span><span class="journal-heading">${esc(title)}</span><span class="journal-count">${items.length?'有更新':'有紀錄'}</span><span class="journal-fold">查看</span></summary><div class="journal-day-body">${description}${sourceDetails}</div></details></article>`;
+  }
 
   function setAsOf(val){
     asOfNotice='';
@@ -758,14 +1262,13 @@
     return `<div class="evo-metrics">${cells.map(([t,n,sub,c])=>`<div class="evo-metric"><span>${esc(t)}</span><strong class="${c}">${esc(n)}</strong><small>${esc(sub)}</small></div>`).join('')}</div>`;
   }
   function filteredEvoBatches(evo){
-    return (evo?.timeline_batches||[]).filter(b=>searchLogic([b.date_label,b.title,b.summary,b.affected_groups,b.entity_changes,b.events,b.snapshots,b.assessments]));
+    return (evo?.timeline_batches||[]).filter(b=>!evoChangesOnly||(b.entity_changes||[]).length>0);
   }
   function filteredEvoShifts(evo){
-    return (evo?.decision_shifts||[]).filter(s=>searchLogic([s.title,s.native_id,s.shift_label,s.early_record,s.current_record,s.change_reason,s.group_title]));
+    return evo?.decision_shifts||[];
   }
   function filteredEvoCheckpoints(evo){
-    const list=evo?.all_checkpoints||evo?.as_of_checkpoints||[];
-    return list.filter(c=>searchLogic([c.display_time,c.as_of,c.title,c.kind_label,c.active_snapshot_id]));
+    return evo?.all_checkpoints||evo?.as_of_checkpoints||[];
   }
   function evoBatchCard(b){
     const groups=(b.affected_groups||[]).map(g=>`<span class="pill gray">${esc(g.title)} ×${g.count}</span>`).join('');
@@ -808,12 +1311,9 @@
   function syncEvolutionDrawer(evo){
     if(viewName!=='evolution'||!evo)return;
     if(evoView==='timeline'){
-      const batches=filteredEvoBatches(evo);
-      const b=batches[evoIndex]||batches[0];
-      if(!b)return;
-      if(b.primary_entity_id&&entity(b.primary_entity_id)){openDetail(b.primary_entity_id,false,true);return;}
-      const ref=b.primary_source_record&&evo.source_refs?.[b.primary_source_record];
-      if(ref){sourceDrawer(ref,null,false,true);highlightEvolutionChips(null,b.primary_source_record);}
+      // 開發日誌不自動開啟技術抽屜；只有使用者主動查看紀錄才開。
+      if($('#drawer').classList.contains('auto-synced'))close();
+      return;
     }else if(evoView==='shifts'){
       const s=filteredEvoShifts(evo)[0];
       if(s?.entity_id&&entity(s.entity_id))openDetail(s.entity_id,false,true);
@@ -832,11 +1332,7 @@
       return;
     }
     const batches=filteredEvoBatches(evo),shifts=filteredEvoShifts(evo),cps=filteredEvoCheckpoints(evo);
-    const tabLabels={
-      timeline:`🕒 演進時間軸（${batches.length} 批）`,
-      shifts:`🔀 設計變更（${shifts.length} 項）`,
-      checkpoints:`📸 歷史版本（${cps.length} 點）`
-    };
+    const tabLabels={timeline:'開發日誌',shifts:'設計怎麼改',checkpoints:'舊版紀錄'};
     document.querySelectorAll('[data-evo-view]').forEach(b=>{
       const v=b.dataset.evoView,act=v===evoView;
       b.classList.toggle('active',act);b.setAttribute('aria-selected',act);
@@ -868,22 +1364,23 @@
     }
     const stepNav=$('#evo-step-nav'),rail=$('#evolution-rail'),bodyWrap=document.querySelector('.evolution-body');
     const isTimeline=evoView==='timeline';
-    if(stepNav)stepNav.hidden=!isTimeline;
-    if(rail)rail.hidden=!isTimeline;
-    if(bodyWrap)bodyWrap.classList.toggle('single-col',!isTimeline);
+    if(stepNav)stepNav.hidden=true;
+    if(rail)rail.hidden=true;
+    if(bodyWrap)bodyWrap.classList.add('single-col');
+    $('#evo-asof').closest('.evo-asof-label').hidden=evoView!=='checkpoints';
+    if(stepNav&&!stepNav.querySelector('[data-evo-changes]')){
+      stepNav.insertAdjacentHTML('beforeend','<button type="button" data-evo-changes="1" aria-pressed="false">只看有變更</button>');
+    }
+    const changeButton=stepNav?.querySelector('[data-evo-changes]');
+    if(changeButton){
+      changeButton.setAttribute('aria-pressed',String(evoChangesOnly));
+      changeButton.textContent=evoChangesOnly?'顯示所有日期':'只看有變更';
+    }
 
     if(isTimeline){
-      evoIndex=Math.min(Math.max(evoIndex,0),Math.max(batches.length-1,0));
-      $('#evo-prev').disabled=!batches.length||evoIndex===0||evoAll;
-      $('#evo-next').disabled=!batches.length||evoIndex===batches.length-1||evoAll;
-      $('#evo-all').disabled=!batches.length;
-      $('#evo-all').setAttribute('aria-pressed',evoAll);
-      $('#evo-all').textContent=evoAll?'聚焦單一批次':'展開全部批次';
-      $('#evo-position').textContent=!batches.length?'0 / 0':evoAll?`全部 ${batches.length} 批`:`${evoIndex+1} / ${batches.length}`;
-      $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${batches.length} 批符合`:'';
-      rail.innerHTML=batches.map((b,i)=>`<div class="rail-entry"><button type="button" class="${b.is_exact_time?'documented':'partial'}" data-evo-batch="${i}" ${i===evoIndex&&!evoAll?'aria-current="step"':''} title="${esc(b.title)}"><span>${String(b.ordinal).padStart(2,'0')}</span><em><b>${esc(b.date_label)}</b> · ${hl(b.lead_title)}</em></button></div>`).join('');
-      const shown=evoAll?batches:(batches[evoIndex]?[batches[evoIndex]]:[]);
-      $('#evolution-content').innerHTML=evoMetricsStrip(evo)+(shown.length?shown.map(evoBatchCard).join(''):`<div class="logic-empty"><h2>此範圍或時間切面下沒有符合的演進批次</h2><p>請調整搜尋關鍵字、Agent 範圍或點選「回到最新狀態」。</p><button type="button" class="logic-reset-scope" data-reset-asof="1">↺ 回到最新狀態</button></div>`);
+      const recent=[...batches].reverse();
+      $('#evo-search-note').textContent=query()?`找到 ${recent.length} 天紀錄`:'';
+      $('#evolution-content').innerHTML=`<div class="journal-intro"><h2>開發日誌</h2><p>最近的紀錄在最上面。點日期看當天做過什麼；完成與否請以「進度」頁為準。</p><small>共 ${recent.length} 天有紀錄</small></div>`+(recent.length?recent.map((b,i)=>journalEntry(b,i)).join(''):'<div class="logic-empty"><h2>沒有符合的開發紀錄</h2><p>請調整搜尋或切換專案範圍。</p></div>');
     }else if(evoView==='shifts'){
       $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${shifts.length} 項轉折符合`:'';
       $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>設計改了什麼（共 ${shifts.length} 項）</h2><p class="io-basis">對照早期與目前的設計。</p></div>${shifts.length?shifts.map(evoShiftCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的設計轉折項目</h2></div>'}</section>`;
@@ -901,18 +1398,27 @@
   }
   $('#evo-asof')?.addEventListener('change',ev=>setAsOf(ev.target.value));
   document.addEventListener('click',ev=>{
-    const el=ev.target.closest('[data-evo-view],[data-evo-batch],[data-evolution-source],[data-evo-asof],[data-reset-asof],[data-clear-slice-notice],#evo-reset-asof,#evo-prev,#evo-next,#evo-all');
+    const el=ev.target.closest('[data-evo-view],[data-evo-batch],[data-evo-changes],[data-evolution-source],[data-evo-asof],[data-reset-asof],[data-clear-slice-notice],#evo-reset-asof,#evo-prev,#evo-next,#evo-all');
     if(!el)return;
     if(el.dataset.clearSliceNotice){asOfNotice='';$('#evo-slice-banner').hidden=true;return;}
     if(el.dataset.evoView){evoView=el.dataset.evoView;renderEvolution();$('#evolution-content').scrollTop=0;return;}
+    if(el.dataset.evoChanges!==undefined){evoChangesOnly=!evoChangesOnly;evoIndex=0;evoAll=false;renderEvolution();$('#evolution-content').scrollTop=0;return;}
     if(el.dataset.evoBatch!==undefined){moveEvoBatch(Number(el.dataset.evoBatch));return;}
     if(el.dataset.evolutionSource){evolutionSource(el.dataset.evolutionSource,el);return;}
     if(el.dataset.evoAsOf!==undefined||el.dataset.evoAsof!==undefined){setAsOf(el.dataset.evoAsof||el.dataset.evoAsOf);return;}
-    if(el.dataset.resetAsof||el.id==='evo-reset-asof'){if(el.classList.contains('logic-reset-scope')){$('#search').value='';}setAsOf('');return;}
+    if(el.dataset.resetAsof||el.id==='evo-reset-asof'){setAsOf('');return;}
     if(el.id==='evo-prev')moveEvoBatch(evoIndex-1);
     if(el.id==='evo-next')moveEvoBatch(evoIndex+1);
     if(el.id==='evo-all'){evoAll=!evoAll;renderEvolution();}
   });
+  document.addEventListener('toggle',ev=>{
+    const details=ev.target;
+    if(!details.matches?.('.journal-source')||!details.open||details.dataset.loaded)return;
+    const b=(evoData()?.timeline_batches||[]).find(x=>x.batch_id===details.dataset.journalSource);
+    if(!b)return;
+    details.querySelector('.journal-source-target').innerHTML=evoBatchCard(b);
+    details.dataset.loaded='true';
+  },true);
   document.addEventListener('keydown',ev=>{
     if(viewName!=='evolution'||evoView!=='timeline'||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(ev.key)||ev.altKey||ev.ctrlKey||ev.metaKey)return;
     if(ev.target.closest?.('input,select,textarea,#drawer'))return;
@@ -939,7 +1445,7 @@
     $('#placeholder').hidden=activeViews.includes(name)||name==='thinking';close();
     if(name==='thinking')syncThinking();
     $('#thumb-bar').hidden=!mobile()||name!=='logic';$('#step-picker').hidden=true;$('#thumb-position').setAttribute('aria-expanded','false');
-    if(name==='logic'){if(data)renderLogic();return;}
+    if(name==='logic'){if(data)renderLogic();$('#thumb-bar').hidden=true;return;}
     if(name==='evolution'){if(data)renderEvolution();return;}
     if(name==='progress'){if(data)renderProgress();return;}
     if(name==='architecture'){if(data)fit();return;}
@@ -992,59 +1498,43 @@
     if(el.dataset.jump){if(!el.closest('#drawer'))origin=el;openDetail(el.dataset.jump);}
     if(el.dataset.view)view(el.dataset.view);
     if(el.id==='close')close();
-    if(el.id==='mode'){expanded=!expanded;renderGraph();}
-    if(el.id==='list-mode'){listMode=!listMode;renderGraph();}
-    if(el.id==='fit')fit();
-    if(el.id==='zoom-in')zoom(.8);
-    if(el.id==='zoom-out')zoom(1.25);
     if(el.id==='back')view('architecture');
   });
-  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){close();return;}const target=ev.target.closest('[data-node],[data-edge]');if(target&&['Enter',' '].includes(ev.key)&&target.tagName.toLowerCase()==='g'){ev.preventDefault();origin=target;openDetail(target.dataset.node||target.dataset.edge);}if(ev.target===$('#canvas')){const move={ArrowLeft:[-60,0],ArrowRight:[60,0],ArrowUp:[0,-60],ArrowDown:[0,60]}[ev.key];if(move){ev.preventDefault();camera[0]+=move[0];camera[1]+=move[1];setCamera();}if(ev.key==='+')zoom(.8);if(ev.key==='-')zoom(1.25);}});
-  document.addEventListener('focusin',ev=>{const id=ev.target.dataset?.node;const n=nodes.find(n=>n.id===id);if(n&&ev.target.closest('#graph')&&(n.x<camera[0]||n.y<camera[1]||n.x+n.w>camera[0]+camera[2]||n.y+n.h>camera[1]+camera[3])){camera[0]=n.x-(camera[2]-n.w)/2;camera[1]=n.y-(camera[3]-n.h)/2;setCamera();}});
-  let drag=null, pinch=null;const pointers=new Map();
-  $('#canvas').addEventListener('pointerdown',e=>{
-    if(e.target.closest('[data-node],[data-edge]')&&!pointers.size)return;
-    pointers.set(e.pointerId,[e.clientX,e.clientY]);
-    if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={distance:Math.hypot(a[0]-b[0],a[1]-b[1]),camera:[...camera]};drag=null;}
-    else if(!e.target.closest('[data-node],[data-edge]'))drag=[e.clientX,e.clientY,...camera];
-    $('#canvas').setPointerCapture(e.pointerId);
+  document.addEventListener('keydown',ev=>{
+    if(ev.key==='Escape'){close();return;}
+    const target=ev.target.closest('[data-node],[data-edge]');
+    if(target&&['Enter',' '].includes(ev.key)){
+      ev.preventDefault();
+      target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+      return;
+    }
+    if(ev.target===$('#canvas')){
+      const move={ArrowLeft:[-60,0],ArrowRight:[60,0],ArrowUp:[0,-60],ArrowDown:[0,60]}[ev.key];
+      if(move){ev.preventDefault();$('#canvas').scrollBy({left:move[0],top:move[1]});}
+    }
   });
-  $('#canvas').addEventListener('pointermove',e=>{
-    if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,[e.clientX,e.clientY]);
-    if(pinch&&pointers.size===2){const [a,b]=[...pointers.values()],distance=Math.hypot(a[0]-b[0],a[1]-b[1]);if(distance<1||pinch.distance<1)return;const c=pinch.camera,ratio=Math.max(.2,Math.min(5,pinch.distance/distance));camera=[c[0]+c[2]*(1-ratio)/2,c[1]+c[3]*(1-ratio)/2,c[2]*ratio,c[3]*ratio];setCamera();return;}
-    if(!drag)return;const r=$('#canvas').getBoundingClientRect();camera=[drag[2]-(e.clientX-drag[0])*drag[4]/r.width,drag[3]-(e.clientY-drag[1])*drag[5]/r.height,drag[4],drag[5]];setCamera();
-  });
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])$('#canvas').addEventListener(type,e=>{pointers.delete(e.pointerId);pinch=null;drag=null;});
-  // Search controls move on mobile; IDs and data state stay shared.
-  const searchLabelEl=$('#search').parentElement;
-  const searchHome=document.createComment('search home');
-  searchLabelEl.before(searchHome);
-  document.querySelector('header').insertAdjacentHTML('beforeend','<div class="mobile-tools mobile-only"><button id="mobile-search-toggle" aria-label="展開搜尋" aria-expanded="false">⌕</button></div>');
-  let wasMobile=null,desktopListMode=null;
+  // 網站不提供文字搜尋。手機與桌面共用分類切換。
+  let wasMobile=null;
   function syncMobileLayout(){
     const on=mobile();if(on!==wasMobile){
-      if(on){if(wasMobile===false)desktopListMode=listMode;$('#mobile-search').append(searchLabelEl);listMode=true;}
-      else{searchHome.after(searchLabelEl);listMode=desktopListMode??matchMedia('(max-width:900px)').matches;$('#mobile-search').hidden=true;$('#step-picker').hidden=true;}
+      if(!on)$('#step-picker').hidden=true;
       wasMobile=on;
       if(data){renderGraph();if(viewName==='logic')renderLogic();if(viewName==='progress')renderProgress();}
       if(on&&$('#drawer').classList.contains('open')&&!$('#drawer .sheet-content'))enhanceMobileDrawer(entity(selected)?.id);
     }
-    $('#thumb-bar').hidden=!on||viewName!=='logic';
+    $('#thumb-bar').hidden=true;
     document.querySelectorAll('#stats .stat').forEach((e,i)=>{if(on){e.setAttribute('role','button');e.tabIndex=0;e.dataset.metric=i;e.setAttribute('aria-label',e.textContent);}else{e.removeAttribute('role');e.removeAttribute('tabindex');delete e.dataset.metric;}});
     syncSheet();
   }
   new MutationObserver(()=>syncMobileLayout()).observe($('#stats'),{childList:true});
-  $('#group-list').addEventListener('toggle',e=>{const id=e.target.dataset?.groupId;if(id&&!query()){if(e.target.open)openGroups.add(id);else openGroups.delete(id);}},true);
   document.addEventListener('click',ev=>{
-    const el=ev.target.closest('[data-groups],[data-sheet-jump],.sheet-resize,.sheet-grab,#thumb-prev,#thumb-next,#thumb-position,#thumb-detail,#mobile-search-toggle,[data-metric]');if(!el||!mobile())return;
-    if(el.dataset.groups){document.querySelectorAll('.mobile-group').forEach(d=>{d.open=el.dataset.groups==='open';if(d.open)openGroups.add(d.dataset.groupId);else openGroups.delete(d.dataset.groupId);});}
+    const el=ev.target.closest('[data-groups],[data-sheet-jump],.sheet-resize,.sheet-grab,#thumb-prev,#thumb-next,#thumb-position,#thumb-detail,[data-metric]');if(!el||!mobile())return;
     if(el.matches('.sheet-resize,.sheet-grab')){$('#drawer').classList.toggle('sheet-full');syncSheetSize();}
     if(el.dataset.sheetJump!==undefined){const d=$(`#drawer [data-sheet-section="${el.dataset.sheetJump}"]`);if(d){d.open=true;d.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});}}
     if(el.id==='thumb-prev')moveLogic(logicIndex-1);
     if(el.id==='thumb-next')moveLogic(logicIndex+1);
     if(el.id==='thumb-position'){$('#step-picker').hidden=!$('#step-picker').hidden;el.setAttribute('aria-expanded',String(!$('#step-picker').hidden));}
     if(el.id==='thumb-detail'){origin=el;const m=currentMaterial(),s=filteredSteps(m)[logicIndex]||m?.steps?.[logicIndex],id=s?.related_entity_ids?.find(id=>entity(id));if(id)openDetail(id);else if(s?.evidence_refs?.[0])sourceDrawer(s.evidence_refs[0],el);}
-    if(el.id==='mobile-search-toggle'){const panel=$('#mobile-search');panel.hidden=!panel.hidden;el.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)$('#search').focus();}
     if(el.dataset.metric!==undefined&&closureData()){closureFilter=['CLOSED_REPORTED','NEEDS_USER_REVIEW','NEEDS_FIX','PENDING_REPORT'][Number(el.dataset.metric)]||'all';progressView='board';view('progress');renderProgress();return;}
     if(el.dataset.metric!==undefined){const key=['evidence','pending','unresolved','next'][Number(el.dataset.metric)]||'all';progressView='board';progressFilter=key;view('progress');renderProgress();$('#progress-content').scrollTop=0;}
   });
@@ -1075,7 +1565,6 @@
   }
   setAgent(initialAgent,false);
   $('#agent').addEventListener('change',()=>setAgent($('#agent').value));
-  $('#search').addEventListener('input',()=>{if(data){renderGraph();renderLogic();renderEvolution();renderProgress();}});
   window.addEventListener('resize',()=>{syncMobileLayout();if(data)fit();});
   syncMobileLayout();
   load();

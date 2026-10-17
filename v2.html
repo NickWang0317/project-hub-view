@@ -14,6 +14,7 @@
       }
     </script>
     <link rel="stylesheet" href="assets/v2_hub.css" />
+    <script src="assets/mermaid_vendor.js" defer></script>
     <script src="assets/v2_bundle.js" defer></script>
 <script src="assets/v2_hub.js" defer></script>
   </head>
@@ -228,15 +229,6 @@ html.pih-unlocked #auth-gate { display: none !important; }
           <h1>看懂 Agent 做到哪裡</h1>
           <p>架構、流程、進度，一站查看。</p>
         </div>
-        <div class="controls">
-          <label class="search-label"
-            >搜尋<input
-              id="search"
-              type="search"
-              placeholder="輸入功能或問題…"
-              autocomplete="off"
-          /></label>
-        </div>
       </section>
       <div id="notice" role="status" aria-live="polite">載入中…</div>
       <section id="thinking-panel" hidden aria-label="雙 Agent 視覺推演">
@@ -250,31 +242,18 @@ html.pih-unlocked #auth-gate { display: none !important; }
       <main id="architecture">
         <section class="graph-panel">
           <div class="graph-toolbar">
-            <div><b>能力架構</b><small id="count"></small></div>
-            <div class="tools">
-              <button id="mode" aria-pressed="false">展開模組</button
-              ><button id="list-mode" aria-pressed="false">分群清單</button
-              ><button id="zoom-out" aria-label="縮小">−</button
-              ><button id="zoom-in" aria-label="放大">＋</button
-              ><button id="fit">適合畫面</button>
-            </div>
-          </div>
-          <div class="legend">
-            <span>● 已完成</span><span>◐ 待確認</span><span>▱ 未建立</span
-            ><span>── 已記錄的關係</span><span>┄┄ 尚待確認</span>
+            <div class="arch-heading"><span class="arch-eyebrow">AI AGENT · 架構總覽</span><b id="graph-heading">AI Agent 怎麼運作？</b><small id="count">從發現問題，到給出建議。</small></div>
           </div>
           <div
             id="canvas"
-            tabindex="0"
-            aria-label="架構畫布；方向鍵平移，加減縮放，Escape 清除選取"
+            role="img"
+            aria-label="AI Agent 白話流程架構圖"
           >
-            <svg id="graph" role="group" aria-label="互動架構圖"></svg>
+            <div id="graph" aria-hidden="true"></div>
           </div>
-          <div id="group-list" hidden></div>
           <div class="graph-foot">
-            點選模組或箭頭查看詳情。<span
-              id="match-count"
-            ></span>
+            <span class="arch-note-dot" aria-hidden="true"></span>
+            依現有開發紀錄整理的流程示意，不代表每一步都已完成驗收。
           </div>
         </section>
         <section id="logic-panel" hidden aria-label="設計流程推演">
@@ -346,7 +325,7 @@ html.pih-unlocked #auth-gate { display: none !important; }
                 aria-selected="true"
                 data-evo-view="timeline"
               >
-                🕒 演進時間軸</button
+                開發日誌</button
               ><button
                 type="button"
                 class="track-pill"
@@ -354,7 +333,7 @@ html.pih-unlocked #auth-gate { display: none !important; }
                 aria-selected="false"
                 data-evo-view="shifts"
               >
-                🔀 設計變更</button
+                設計怎麼改</button
               ><button
                 type="button"
                 class="track-pill"
@@ -362,7 +341,7 @@ html.pih-unlocked #auth-gate { display: none !important; }
                 aria-selected="false"
                 data-evo-view="checkpoints"
               >
-                📸 查看舊版本
+                舊版紀錄
               </button>
             </div>
             <div class="evolution-asof-bar">
@@ -395,13 +374,7 @@ html.pih-unlocked #auth-gate { display: none !important; }
                 aria-live="polite"
               ></span>
             </div>
-            <div
-              class="evolution-banner"
-              role="note"
-              title="工作紀錄與知識版本的演進歷程"
-            >
-              開發改了什麼
-            </div>
+            <div class="evolution-banner" role="note">按日期看開發紀錄</div>
           </div>
           <div
             id="evo-slice-banner"
@@ -452,7 +425,6 @@ html.pih-unlocked #auth-gate { display: none !important; }
         <p></p>
         <button id="back">返回架構</button>
       </section>
-      <div id="mobile-search" class="mobile-only" hidden></div>
       <div id="thumb-bar" class="mobile-only" hidden aria-label="推演步進控制">
         <button id="thumb-prev" aria-label="上一步">◀ 上一步</button
         ><button
