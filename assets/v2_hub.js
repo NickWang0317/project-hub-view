@@ -1034,6 +1034,44 @@
     {status:'NEEDS_USER_REVIEW',title:'等你驗證',desc:'已有交付內容，等待人工確認。',tone:'amber',action:'前往驗證'},
     {status:'PENDING_REPORT',title:'等待完成回報',desc:'先補完成紀錄，再安排驗證。',tone:'blue',action:'查看紀錄'}
   ];
+  // MVP 的下一步：驗收狀態取自現有功能結案；後續路線為尚未核准的提案。
+  function mvpRoadmap(p){
+    const items=p?.closure?.items||[];
+    const checks=['action.advice','action.blind-test'].map(id=>items.find(i=>i.item_id===id));
+    const accepted=checks.filter(i=>i?.development_status==='CLOSED_REPORTED'&&i.closure_basis==='user_acceptance').length;
+    const stages=[
+      {num:'01',when:'優先開發',status:'待開發規劃',
+       tone:'active',title:'建立主任盲測填答',
+       desc:'ME Dashboard 上方列異常統計，下方依機台集中所有異常；主任逐筆只填「下一步會做什麼？」。',
+       done:'過關條件：透過 API 保存同一份即時資料、主任工號、異常內容、回答與填答時間。',
+        foot:'工程：異常彙整 · 主任輸入框 · Oracle 2 張表 · API'},
+      {num:'02',when:'功能完成後',status:accepted===2?'既有交付已驗收':'待人工驗收',
+       tone:'proposal',title:'AI 與主任獨立判斷',
+       desc:'AI 先依即時異常提出下一步及原因；主任看不到 AI 建議，獨立填答後送出。白名單照列，AI 固定「不動作／白名單」。',
+       done:'過關條件：AI 不查歷史；主任提交前完全看不到 AI 答案；雙方使用相同的異常 Snapshot。',
+       foot:'既有「下一步與原因／盲測交付」：'+accepted+'／2 項已人工驗收'},
+      {num:'03',when:'送出後',status:'建議規劃',
+       tone:'proposal',title:'解盲並驗證一致性',
+       desc:'主任送出後，比較主任與 AI 的下一步，分成完全一致、部分一致、不一致，統計判斷一致率。',
+       done:'過關條件：每筆都可回查主任工號、異常、兩方建議、時間及分類結果。',
+       foot:'結果用於找出 AI 能力與不足，作為後續改善依據'}
+    ];
+    const cards=stages.map(s=>`<article class="mvp-plan-card ${s.tone}">
+      <div class="mvp-plan-meta"><span class="mvp-plan-index">${s.num}</span><span class="mvp-plan-stage">${esc(s.when)}</span><span class="mvp-plan-status">${esc(s.status)}</span></div>
+      <h4>${esc(s.title)}</h4><p>${esc(s.desc)}</p><p class="mvp-plan-gate">${esc(s.done)}</p><small>${esc(s.foot)}</small>
+    </article>`).join('');
+    return `<section class="mvp-roadmap" aria-label="MVP 下一步規劃">
+      <div class="mvp-plan-heading"><div><span class="mvp-plan-eyebrow">MVP ACTION AGENT · ROADMAP</span><h2>MVP 下一步怎麼走？</h2></div><span class="mvp-plan-kind">驗收優先</span></div>
+      <p class="mvp-plan-lead">看見異常 → AI 建議下一步 → 主任獨立盲測 → 驗證一致性。第一版不查歷史、不排序，也不自動派工。</p>
+      <div class="mvp-plan-grid">${cards}</div>
+      <div class="mvp-plan-build" aria-label="盲測所需的三項工程">
+        <div><b>前端 · 異常與主任輸入</b><span>上方統計各類異常；下方依機台彙整。AI 的「發現異常／建議下一步／建議原因」在主任填答時隱藏，主任只填「下一步會做什麼？」。</span></div>
+        <div><b>DB · 先用 2 張表</b><span>Case 表保存異常、Snapshot、AI 建議及比對結果；Human 表保存主任工號、下一步回答與填答時間。</span></div>
+        <div><b>API · 獨立判斷與解盲</b><span>固定即時異常 → AI 獨立判斷並保密保存 → 主任獨立填答並鎖定 → 解盲比較三類一致性。</span></div>
+      </div>
+      <p class="mvp-plan-source">依「ME Dashboard AI Agent｜MVP V1 盲測計畫」整理。兩表方案須確保主任送出前，API 不回傳任何 AI 答案；如果權限無法隔離，才重新評估拆表。此頁是規劃，不是可填答的正式盲測系統；公司 ME Dashboard 的前端、Oracle 表與 API 尚未在此建立。兩項驗收狀態取自既有紀錄，其餘不計入下方待辦統計。</p>
+    </section>`;
+  }
   function nextStepsView(p){
     const all=p?.closure?.items||[];
     const active=all.filter(i=>nextStages.some(s=>s.status===i.development_status));
@@ -1048,7 +1086,8 @@
     }).join('');
     const counts=nextStages.map(s=>`<span>${s.title} <b>${active.filter(i=>i.development_status===s.status).length}</b></span>`).join('');
     $('#progress-note').textContent=query()?`符合搜尋：${results.length} 項`:'';
-    $('#progress-content').innerHTML=`<div class="next-head"><h2>下一步 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">依目前狀態分組，不是 AI 推測的開發順序。資料沒有明確的阻塞依賴關係，不自行判定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}`;
+    const roadmap=$('#agent').value==='action'?mvpRoadmap(p):'';
+    $('#progress-content').innerHTML=roadmap+`<div class="next-head"><h2>待處理事項 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">以下依目前驗收狀態分組，不是 AI 推測的開發順序。資料沒有明確記載阻塞依賴，不自行認定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}`;
   }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;

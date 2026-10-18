@@ -737,6 +737,33 @@ body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:
  .journal-key-points b{font-size:17px}.journal-key-points span,.journal-more li span{font-size:15px}
  .journal-key-points em{font-size:12px}
 }
+/* MVP 路線圖：第一步反映驗收，後續僅為建議；不修改正式資料。 */
+.mvp-roadmap{padding:19px 20px 15px;border:1px solid var(--line);border-radius:17px;background:var(--panel);margin-bottom:23px}
+.mvp-plan-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mvp-plan-eyebrow{display:block;color:var(--green);font-size:10px;font-weight:800;letter-spacing:1.6px;margin-bottom:4px}
+.mvp-plan-heading h2{font-size:clamp(21px,2.2vw,28px);letter-spacing:-.4px}
+.mvp-plan-kind{flex:none;border:1px solid var(--green);border-radius:999px;color:var(--green);padding:3px 10px;font-size:12px;font-weight:700}
+.mvp-plan-lead{font-size:14px;color:var(--muted);line-height:1.6;margin:8px 0 16px}
+.mvp-plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.mvp-plan-card{display:flex;flex-direction:column;gap:8px;padding:16px 15px 15px;border:1px solid var(--line);border-radius:13px;background:var(--bg);min-width:0}
+.mvp-plan-card.active{border-color:color-mix(in srgb,var(--green),var(--line) 53%)}
+.mvp-plan-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
+.mvp-plan-index{font-size:23px;font-weight:800;color:var(--green)}
+.mvp-plan-card.proposal .mvp-plan-index{color:var(--blue)}
+.mvp-plan-stage{font-size:11px;color:var(--muted)}
+.mvp-plan-status{margin-left:auto;font-size:11px;padding:3px 8px;border-radius:999px;color:var(--green);border:1px solid color-mix(in srgb,var(--green),transparent 50%)}
+.mvp-plan-card.proposal .mvp-plan-status{color:var(--muted);border-color:var(--line)}
+.mvp-plan-card h4{font-size:18px;line-height:1.4;font-weight:750;margin:0}
+.mvp-plan-card p{font-size:13px;line-height:1.55;color:var(--ink);margin:0}
+.mvp-plan-card .mvp-plan-gate{color:var(--muted);border-top:1px solid var(--line);padding-top:9px;margin-top:auto}
+.mvp-plan-card small{font-size:12px;color:var(--muted)}
+.mvp-plan-source{font-size:11px;line-height:1.6;color:var(--muted);margin:13px 0 0}
+.mvp-plan-build{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:13px}
+.mvp-plan-build>div{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--bg)}
+.mvp-plan-build b{font-size:13px;color:var(--blue)}
+.mvp-plan-build span{font-size:12px;color:var(--muted);line-height:1.55}
+.mvp-roadmap+.next-head{padding-top:16px;border-top:1px solid var(--line)}
+@media(max-width:840px){.mvp-plan-grid,.mvp-plan-build{grid-template-columns:1fr}.mvp-roadmap{padding:17px 13px 13px}.mvp-plan-card{padding:14px}.mvp-plan-card h4{font-size:18px}.mvp-plan-card p{font-size:14px}.mvp-plan-heading h2{font-size:22px}}
 .next-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 .next-head h2{font-size:19px;margin:0}
 .next-counts{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}
