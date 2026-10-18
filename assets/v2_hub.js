@@ -7,7 +7,7 @@
   themeToggle.addEventListener('click',()=>{const theme=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;try{localStorage.setItem('pih_v2_theme',theme);}catch{}syncTheme();});
   window.addEventListener('storage',e=>{if(e.key==='pih_v2_theme'){document.documentElement.dataset.theme=e.newValue==='light'?'light':'dark';syncTheme();}});
   const mobile = () => matchMedia('(max-width:640px)').matches;
-  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#thumb-bar,#step-picker').forEach(e=>e.inert=active);}
+  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,#home-progress-shortcut,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#thumb-bar,#step-picker').forEach(e=>e.inert=active);}
   new MutationObserver(syncSheet).observe($('#drawer'),{attributes:true,attributeFilter:['class']});
   $('#drawer-backdrop').addEventListener('click',()=>close());
   window.addEventListener('resize',syncSheet);
@@ -992,6 +992,20 @@
   };
   let closureFilter='all',reviewAuthenticated=false,reviewEnabled=false;
   const closureData=()=>data?.progress?.closure;
+  function renderHomeShortcut(){
+    const items=closureData()?.items;
+    const label=$('#home-progress-counts'),button=$('#home-next-step');
+    if(!Array.isArray(items)){
+      label.textContent='尚未取得進度資料';button.disabled=true;return;
+    }
+    const closed=items.filter(i=>i.development_status==='CLOSED_REPORTED').length;
+    const active=items.filter(i=>['NEEDS_FIX','NEEDS_USER_REVIEW','PENDING_REPORT'].includes(i.development_status)).length;
+    label.textContent=`已結案 ${closed} 項 · 待處理 ${active} 項`;
+    button.disabled=false;
+  }
+  $('#home-next-step').addEventListener('click',()=>{
+    progressView='next';view('progress');$('#progress-content').scrollTop=0;
+  });
   const closureMatch=()=>true;
   // 只顯示可撤銷的人工作業；機器判斷的結案與未解問題不允許一鍵覆蓋。
   const canReopen=i=>i&&['CLOSED_REPORTED','NEEDS_FIX'].includes(i.development_status)&&['accept','reject'].includes(i.manual_decision)&&['user_acceptance','user_review'].includes(i.closure_basis);
@@ -1003,11 +1017,15 @@
     const v=await r.json();if(token!==request||scope!==$('#agent').value||currentAsOf)return;
     if(data?.progress)data.progress.closure=v.closure;
     reviewAuthenticated=v.authenticated;reviewEnabled=v.write_enabled;
+    renderHomeShortcut();
     if(viewName==='progress')renderProgress();
   }
+  // 對兩種 Agent 共用相同處理優先序；同一狀態維持原始順序，不改驗收資料。
+  const closurePriority={NEEDS_FIX:0,NEEDS_USER_REVIEW:1,PENDING_REPORT:2,CLOSED_REPORTED:3};
   function closureBoard(){
     const p=closureData(),all=p.items||[],matched=all.filter(closureMatch);
-    const shown=matched.filter(i=>closureFilter==='all'||i.development_status===closureFilter);
+    const shown=matched.filter(i=>closureFilter==='all'||i.development_status===closureFilter)
+      .sort((a,b)=>(closurePriority[a.development_status]??4)-(closurePriority[b.development_status]??4));
     const readonly=Boolean(window.__V2_STATIC_BUNDLE__||currentAsOf);
     $('#progress-note').textContent=query()?`找到 ${matched.length} 項`:'';
     const cards=Object.entries(closureLabels).map(([key,label])=>`<button class="p-metric" data-closure-filter="${key}" aria-pressed="${closureFilter===key}"><span>${label}</span><strong class="${closureTones[key]}">${p.counts[key]||0}</strong>${query()?`<small>符合 ${matched.filter(i=>i.development_status===key).length} 項</small>`:''}</button>`).join('');
@@ -1087,7 +1105,8 @@
     const counts=nextStages.map(s=>`<span>${s.title} <b>${active.filter(i=>i.development_status===s.status).length}</b></span>`).join('');
     $('#progress-note').textContent=query()?`符合搜尋：${results.length} 項`:'';
     const roadmap=$('#agent').value==='action'?mvpRoadmap(p):'';
-    $('#progress-content').innerHTML=roadmap+`<div class="next-head"><h2>待處理事項 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">以下依目前驗收狀態分組，不是 AI 推測的開發順序。資料沒有明確記載阻塞依賴，不自行認定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}`;
+    const planning=roadmap?`<details class="mvp-roadmap-fold"><summary>後續規劃 <small>三階段盲測、工程項目與資料保存說明</small></summary>${roadmap}</details>`:'';
+    $('#progress-content').innerHTML=`<div class="next-head"><h2>待處理事項 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">以下依目前驗收狀態分組，不是 AI 推測的開發順序。資料沒有明確記載阻塞依賴，不自行認定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}${planning}`;
   }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
@@ -1141,8 +1160,23 @@
     }catch(err){message.textContent='未儲存：'+err.message;buttons.forEach(b=>b.disabled=false);}
   });
 
+  // 分開顯示來源快照與人工驗收；沒有跨系統同步證據時一律不宣稱最新。
+  function renderProgressFreshness(){
+    const snapshot=data?.provenance_manifest?.snapshot_captured_at;
+    const parseDate=value=>{const d=new Date(value||'');return Number.isFinite(d.getTime())?d:null;};
+    const snapshotDate=parseDate(snapshot);
+    const shortTime=snapshotDate?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit'}).format(snapshotDate):'日期未知';
+    const fullTime=d=>d?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d):'尚未取得';
+    $('#progress-freshness-label').textContent=`資料快照 ${shortTime} · 同步待確認`;
+    $('#progress-snapshot-time').textContent=fullTime(snapshotDate);
+    const history=(data?.progress?.closure?.items||[]).flatMap(i=>i.history||[]);
+    const reviewTimes=history.filter(h=>['accept','reject','defer','reopen'].includes(h.action)).map(h=>parseDate(h.at)).filter(Boolean);
+    $('#progress-review-time').textContent=reviewTimes.length?fullTime(new Date(Math.max(...reviewTimes.map(d=>d.getTime())))):'尚無人工決定紀錄';
+  }
   function renderProgress(){
     if(!data)return;
+    renderProgressFreshness();
+    renderHomeShortcut();
     const p=progressData();
     document.querySelectorAll('[data-progress-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.progressView===progressView));
     if(!p){
@@ -1485,6 +1519,7 @@
     const activeViews=['architecture','logic','evolution','progress'];
     $('#architecture').hidden=!activeViews.includes(name);$('.graph-panel').hidden=name!=='architecture';$('#logic-panel').hidden=name!=='logic';$('#evolution-panel').hidden=name!=='evolution';$('#progress-panel').hidden=name!=='progress';
     $('#thinking-panel').hidden=name!=='thinking';
+    $('#home-progress-shortcut').hidden=name!=='architecture';
     $('#placeholder').hidden=activeViews.includes(name)||name==='thinking';close();
     if(name==='thinking')syncThinking();
     $('#thumb-bar').hidden=!mobile()||name!=='logic';$('#step-picker').hidden=true;$('#thumb-position').setAttribute('aria-expanded','false');

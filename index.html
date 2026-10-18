@@ -239,6 +239,10 @@ html.pih-unlocked #auth-gate { display: none !important; }
         ></iframe>
       </section>
       <section id="stats" class="stats" aria-label="知識摘要"></section>
+      <section id="home-progress-shortcut" class="home-progress-shortcut" aria-label="開發現況" hidden>
+        <div class="home-progress-copy"><strong>開發現況</strong><span id="home-progress-counts" role="status" aria-live="polite">正在讀取進度…</span></div>
+        <button type="button" id="home-next-step" disabled>查看下一步 ↗</button>
+      </section>
       <main id="architecture">
         <section class="graph-panel">
           <div class="graph-toolbar">
@@ -396,6 +400,15 @@ html.pih-unlocked #auth-gate { display: none !important; }
           <div class="progress-banner" role="note">
             目前進度與待確認項目
           </div>
+          <details id="progress-freshness" class="progress-freshness">
+            <summary><span id="progress-freshness-label">資料來源確認中 · 同步待確認</span><span class="progress-freshness-more">查看詳情</span></summary>
+            <div class="progress-freshness-detail">
+              <p><b>開發資料快照：</b><span id="progress-snapshot-time">尚未取得</span></p>
+              <p><b>人工驗收最後決定：</b><span id="progress-review-time">尚無紀錄</span></p>
+              <p><b>同步狀態：</b>尚未確認是否與最新開發進度同步。</p>
+              <small>快照與驗收時間代表不同資料範圍，不等於整體開發已同步至該時間。</small>
+            </div>
+          </details>
           <div class="progress-controls">
             <div class="progress-tabs" role="group" aria-label="進度子視圖">
               <button data-progress-view="board" aria-pressed="true">

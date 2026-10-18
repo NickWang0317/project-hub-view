@@ -127,6 +127,17 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 #progress-panel{min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .workspace[data-view="progress"] .stats{display:none}
 .progress-banner{flex-shrink:0;border-bottom:1px solid var(--amber);color:var(--amber);padding:9px 14px;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+#progress-panel .progress-freshness{flex-shrink:0;padding:0;border-bottom:1px solid var(--line);background:var(--bg)}
+#progress-panel .progress-freshness>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 14px;list-style:none;font-size:12px;color:var(--muted);font-weight:500}
+#progress-panel .progress-freshness>summary::-webkit-details-marker{display:none}
+#progress-panel .progress-freshness-more{flex:none;color:var(--green);font-size:12px}
+#progress-panel .progress-freshness-more::after{content:' ＋'}
+#progress-panel .progress-freshness[open] .progress-freshness-more::after{content:' －'}
+#progress-panel .progress-freshness-detail{padding:0 14px 11px;color:var(--muted);font-size:12px}
+#progress-panel .progress-freshness-detail p{margin:4px 0;font-size:12px}
+#progress-panel .progress-freshness-detail b{color:var(--ink)}
+#progress-panel .progress-freshness-detail small{display:block;margin-top:7px;line-height:1.5}
+@media(max-width:640px){#progress-panel .progress-freshness>summary{padding:5px 8px;min-height:44px}#progress-panel .progress-freshness-detail{padding:0 8px 9px}}
 .progress-controls{flex-shrink:0;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
 .progress-controls>div{min-width:0;max-width:100%}
 .progress-tabs,.progress-filters{display:flex;flex-wrap:wrap;gap:6px}
@@ -762,8 +773,15 @@ body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:
 .mvp-plan-build>div{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--bg)}
 .mvp-plan-build b{font-size:13px;color:var(--blue)}
 .mvp-plan-build span{font-size:12px;color:var(--muted);line-height:1.55}
-.mvp-roadmap+.next-head{padding-top:16px;border-top:1px solid var(--line)}
-@media(max-width:840px){.mvp-plan-grid,.mvp-plan-build{grid-template-columns:1fr}.mvp-roadmap{padding:17px 13px 13px}.mvp-plan-card{padding:14px}.mvp-plan-card h4{font-size:18px}.mvp-plan-card p{font-size:14px}.mvp-plan-heading h2{font-size:22px}}
+.mvp-roadmap-fold{margin-top:18px;border:1px solid var(--line);border-radius:17px;background:var(--panel);overflow:hidden}
+.mvp-roadmap-fold>summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:16px 18px;cursor:pointer;list-style:none;font-size:16px;font-weight:700;color:var(--ink)}
+.mvp-roadmap-fold>summary::-webkit-details-marker{display:none}
+.mvp-roadmap-fold>summary small{color:var(--muted);font-size:12px;font-weight:400}
+.mvp-roadmap-fold>summary::after{content:'＋';margin-left:auto;color:var(--green);font-size:20px}
+.mvp-roadmap-fold[open]>summary{border-bottom:1px solid var(--line)}
+.mvp-roadmap-fold[open]>summary::after{content:'－'}
+.mvp-roadmap-fold .mvp-roadmap{border:0;border-radius:0;margin:0}
+@media(max-width:840px){.mvp-plan-grid,.mvp-plan-build{grid-template-columns:1fr}.mvp-roadmap{padding:17px 13px 13px}.mvp-plan-card{padding:14px}.mvp-plan-card h4{font-size:18px}.mvp-plan-card p{font-size:14px}.mvp-plan-heading h2{font-size:22px}.mvp-roadmap-fold>summary{padding:14px}}
 .next-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 .next-head h2{font-size:19px;margin:0}
 .next-counts{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}
@@ -885,6 +903,13 @@ body[data-view="progress"] #stats { display:none; }
   .workspace[data-view="logic"] .flow-node-wrap:not(:last-child)::after{bottom:-11px;font-size:12px}
 }
 
+/* 架構首頁的進度捷徑：沿用功能結案資料，保留原架構圖。 */
+.home-progress-shortcut{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 15px;margin:0 0 10px;border:1px solid color-mix(in srgb,var(--green),var(--line) 42%);border-radius:12px;background:var(--panel)}
+.home-progress-copy{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0}
+.home-progress-copy strong{font-size:15px;color:var(--ink)}
+.home-progress-copy span{font-size:13px;color:var(--muted)}
+.home-progress-shortcut button{flex:none;min-height:40px;border-color:var(--green);color:var(--green);font-weight:600;font-size:13px}
+@media(max-width:640px){.home-progress-shortcut{padding:8px 10px;gap:8px;margin-bottom:8px}.home-progress-copy{flex-direction:column;align-items:flex-start;gap:1px}.home-progress-copy strong{font-size:13px}.home-progress-copy span{font-size:12px}.home-progress-shortcut button{min-height:44px;font-size:12px;padding:7px 9px}}
 /* 架構展示頁：Apple Keynote / Linear 等級高對比深色企業資訊圖，一眼看懂調查迴圈與決策分流。 */
 .workspace[data-view="architecture"] .graph-panel{
   background:radial-gradient(120% 110% at 50% 12%, #07192d 0%, #030911 65%, #020509 100%);
