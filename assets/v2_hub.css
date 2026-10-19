@@ -528,12 +528,20 @@ mark{background:var(--tone-eac37d55);color:var(--ink);border-radius:3px;padding:
 @media(max-width:640px){#drawer .event a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:4px 0}.evo-slice-banner small{display:block;font-size:11px}}
 
 @media(max-width:640px){.workspace .brand-sub,.workspace.is-compact-header .brand-sub{display:none}.mobile-progress-basis{padding:0 6px;margin-bottom:8px}.mobile-progress-basis>summary{font-size:13px;color:var(--muted)}.mobile-progress-basis .p-metrics{margin-top:6px}}
-/* Thinking is isolated in a same-origin document; existing four perspectives retain their styles. */
+/* Thinking remains a separate embedded view, while cases are a first-class workspace tab. */
 #thinking-panel{min-height:0;flex:1;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
 #thinking-panel[hidden]{display:none}#thinking-frame{display:block;width:100%;height:100%;border:0;border-radius:12px}
 .workspace[data-view="thinking"] .context,.workspace[data-view="thinking"] #stats,.workspace[data-view="thinking"] #notice{display:none}
 .workspace[data-view="thinking"]{grid-template-rows:auto auto minmax(0,1fr) auto}
 @media(max-width:768px){.workspace[data-view="thinking"] #thinking-panel{min-height:0}.workspace[data-view="thinking"]>nav{flex-wrap:nowrap;overflow-x:auto}.workspace[data-view="thinking"]>nav button{flex-shrink:0}}
+
+/* 與 AI 思考使用相同 iframe 版型，保留主頁 Tab，不另開獨立頁面。 */
+.workspace[data-view="cases"] .context,.workspace[data-view="cases"] #stats,.workspace[data-view="cases"] #notice{display:none}
+#cases-panel{min-height:0;flex:1;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+#cases-panel[hidden]{display:none}
+#case-thinking-frame{display:block;width:100%;height:100%;border:0;border-radius:12px}
+.workspace[data-view="cases"]{grid-template-rows:auto auto minmax(0,1fr) auto}
+@media(max-width:768px){.workspace[data-view="cases"]>nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.workspace[data-view="cases"]>nav button{flex-shrink:0;min-height:44px;white-space:nowrap}}
 
 /* 功能結案專用樣式；不改動其他視角。 */
 /* 運作流程：一眼看完，不要求使用者逐步切換；技術與證據保留於收合區。 */

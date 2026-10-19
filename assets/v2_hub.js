@@ -7,7 +7,7 @@
   themeToggle.addEventListener('click',()=>{const theme=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;try{localStorage.setItem('pih_v2_theme',theme);}catch{}syncTheme();});
   window.addEventListener('storage',e=>{if(e.key==='pih_v2_theme'){document.documentElement.dataset.theme=e.newValue==='light'?'light':'dark';syncTheme();}});
   const mobile = () => matchMedia('(max-width:640px)').matches;
-  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,#home-progress-shortcut,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#thumb-bar,#step-picker').forEach(e=>e.inert=active);}
+  function syncSheet(){const drawer=$('#drawer'),active=mobile()&&drawer.classList.contains('open')&&!drawer.classList.contains('auto-synced');$('#drawer-backdrop').hidden=!active;document.body.classList.toggle('sheet-open',active);drawer.setAttribute('aria-modal',String(active));if(active)drawer.setAttribute('role','dialog');else drawer.removeAttribute('role');document.querySelectorAll('.workspace>header,.workspace>nav,.context,#stats,#home-progress-shortcut,.graph-panel,#logic-panel,#evolution-panel,#progress-panel,#cases-panel,#thumb-bar,#step-picker').forEach(e=>e.inert=active);}
   new MutationObserver(syncSheet).observe($('#drawer'),{attributes:true,attributeFilter:['class']});
   $('#drawer-backdrop').addEventListener('click',()=>close());
   window.addEventListener('resize',syncSheet);
@@ -491,7 +491,7 @@
     return knowledgeSnapshotPromise;
   }
   window.ProjectKnowledgeSnapshot=workspaceKnowledge;
-  async function load(){const token=++request;$('#notice').textContent='載入中…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf&&window.__V2_STATIC_BUNDLE__.paths?.[currentAgent]?.[currentAsOf]){const response=await fetch(new URL(window.__V2_STATIC_BUNDLE__.paths[currentAgent][currentAsOf],document.baseURI));if(!response.ok)throw Error('歷史時間切面下載失敗');saved=await response.json();window.__V2_STATIC_BUNDLE__.views[currentAgent][currentAsOf]=saved;}if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'資料來自開發紀錄';const m=d.provenance_manifest||{};$('#manifest').textContent=`資料更新：${m.snapshot_captured_at||'尚未取得'}`;renderGraph();renderLogic();renderEvolution();renderProgress();if(!window.__V2_STATIC_BUNDLE__)refreshClosure().catch(()=>{});}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
+  async function load(){const token=++request;$('#notice').textContent='載入中…';try{const currentAgent=$('#agent').value==='history'?'history':'action';const params=new URLSearchParams({agent:currentAgent});if(currentAsOf)params.set('as_of',currentAsOf);let d;const localSnapshot=$('#workspace-knowledge');if(window.__V2_STATIC_BUNDLE__){let saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.[currentAsOf||'latest'];if(!saved&&currentAsOf&&window.__V2_STATIC_BUNDLE__.paths?.[currentAgent]?.[currentAsOf]){const response=await fetch(new URL(window.__V2_STATIC_BUNDLE__.paths[currentAgent][currentAsOf],document.baseURI));if(!response.ok)throw Error('歷史時間切面下載失敗');saved=await response.json();window.__V2_STATIC_BUNDLE__.views[currentAgent][currentAsOf]=saved;}if(!saved&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;saved=window.__V2_STATIC_BUNDLE__.views?.[currentAgent]?.['latest'];}if(!saved)throw Error('此時間切面未收錄於靜態封存');d=structuredClone(saved);}else{let r=await fetch('/api/v2/knowledge?'+params);if(!r.ok&&currentAsOf){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;params.delete('as_of');r=await fetch('/api/v2/knowledge?'+params);}d=await r.json();if(!r.ok)throw Error(d.error||'資料讀取失敗');if(currentAsOf&&d.evolution){const validCps=(d.evolution.as_of_checkpoints||d.evolution.all_checkpoints||[]).map(c=>c.as_of);if(!validCps.includes(currentAsOf)){currentAsOf='';const u=new URL(location.href);u.searchParams.delete('as_of');history.replaceState(null,'',u);params.delete('as_of');const refetch=await fetch('/api/v2/knowledge?'+params);d=await refetch.json();if(!refetch.ok)throw Error(d.error||'資料讀取失敗');asOfNotice=`已自動返回最新切面（原時間切面於「${currentAgent==='action'?'MVP 行動型':'歷史調查型'}」不適用）`;}}}if(token!==request)return;data=d;if(currentAgent==='action'&&d.agent_logic?.workflows?.some(w=>w.id==='mvp_action_workflow')){$('#logic-type').value='design_workflow';logicId='mvp_action_workflow';logicIndex=0;logicAll=false;}selected=null;close();const s=d.summary||{};$('#stats').innerHTML=[['核心已實現',s.core_achieved??0],['待確認',s.pending??0],['未解問題',s.open_issues??0],['下一步',s.next_steps??0]].map(([t,n])=>`<div class="stat"><span>${t}</span><strong>${n}</strong></div>`).join('');$('#stats').title=s.basis||'';$('#notice').textContent=(currentAsOf?`時間切面（as_of: ${currentAsOf}）· `:'')+'資料來自開發紀錄';const m=d.provenance_manifest||{};renderFreshness();renderGraph();renderLogic();renderEvolution();renderProgress();if(!window.__V2_STATIC_BUNDLE__)refreshClosure().catch(()=>{});}catch(e){if(token!==request)return;$('#notice').textContent='無法讀取：'+e.message;}}
   // ---- Agent Logic: manual Design Walkthrough (never a runtime trace; no timers, durations or autoplay). ----
   const DEFAULT_SYNTHETIC_NOTICE='目前沒有教學範例。';
   const logicData=()=>data?.agent_logic||{workflows:[],cases:[],synthetic_examples:[],query_abilities:[],synthetic_notice:DEFAULT_SYNTHETIC_NOTICE};
@@ -754,7 +754,39 @@
     const next=logicIndex+(ev.key==='ArrowRight'?1:-1);
     ev.preventDefault();if(next>=0&&next<steps)moveLogic(next);
   });
-  // ---- Progress 進度視角：依來源重建的開發與驗收追蹤，非 Runtime 健康度。不計算完成率、無自動刷新或動畫。 ----
+  // ---- Progress 進度視角：依來源重建的開發與驗收追蹤，非 Runtime 健康度。不計算完成率、有新資料時提示更新，不中斷使用者操作。 ----
+  function renderFreshness(){
+    const f=data?.freshness||{};
+    const date=v=>v?new Date(v).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'尚未整理';
+    $('#manifest').textContent=`紀錄 ${date(f.events_updated_at)} · 知識 ${date(f.knowledge_updated_at)} · 進度 ${date(f.progress_updated_at)}`+(f.generated_at?` · 網站產生 ${date(f.generated_at)}`:' · 本機即時讀取');
+  }
+  let checkingRevision=false;
+  async function checkRevision(){
+    if(checkingRevision||document.hidden||currentAsOf||!data?.freshness?.revision)return;
+    checkingRevision=true;
+    try{
+      let revision;
+      if(window.__V2_STATIC_BUNDLE__){
+        const r=await fetch(new URL('robots.txt',document.baseURI),{cache:'no-store'});
+        if(!r.ok)return;
+        revision=(await r.text()).match(/data-revision: ([a-f0-9]{64})/)?.[1];
+      }else{
+        const r=await fetch('/api/v2/revision',{cache:'no-store'});
+        if(!r.ok)return;
+        revision=(await r.json()).revision;
+      }
+      if(revision&&revision!==data.freshness.revision&&!$('#data-refresh')){
+        const button=document.createElement('button');button.id='data-refresh';button.type='button';
+        button.textContent='有新紀錄 · 更新畫面';
+        button.onclick=()=>{if(window.__V2_STATIC_BUNDLE__)location.reload();else{button.remove();load();}};
+        $('#manifest').append(' ',button);
+      }
+    }catch{ /* 離線時保留目前內容，下輪重試。 */ }
+    finally{checkingRevision=false;}
+  }
+  setInterval(checkRevision,30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkRevision();});
+
   let progressView='board',progressFilter='all';
   // 待辦直接使用目前功能結案資料；不另存工作清單，也不透過 LLM 猜測優先級。
   const progressTabs=document.querySelector('#progress-panel .progress-tabs');
@@ -1045,7 +1077,9 @@
         </details>
       </article>`;
     }).join('');
-    $('#progress-content').innerHTML=`<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
+    const updates=data?.progress?.source_updates||[];
+    const pending=updates.length?`<details class="p-card source-updates" open><summary>新來源待整理 · ${updates.length} 筆</summary><p>已入庫並收錄歷程，尚未核對對功能進度的影響；既有結案與驗收結果保留。</p>${updates.map(e=>`<p><button class="logic-chip" data-evolution-source="${esc('development_events:'+e.event_id)}">${esc((e.display_date||e.recorded_at||'日期未記載').split('T')[0])} · ${esc(e.title)}</button>${e.agent_scope==='unknown'?'<small>Agent 範圍待確認</small>':''}</p>`).join('')}</details>`:'';
+    $('#progress-content').innerHTML=`${pending}<div class="p-strip-header"><strong>功能進度 · ${all.length} 項</strong><button data-closure-filter="all">全部功能</button></div><div class="p-metrics closure-metrics">${cards}</div><div class="p-grid closure-grid">${rows||'<p class="logic-unknown">沒有符合的功能；請清除搜尋或切回全部。</p>'}</div>`;
   }
   const nextStages=[
     {status:'NEEDS_FIX',title:'先修正',desc:'已有未解問題，修正後再驗證。',tone:'red',action:'查看問題'},
@@ -1090,6 +1124,28 @@
       <p class="mvp-plan-source">依「ME Dashboard AI Agent｜MVP V1 盲測計畫」整理。兩表方案須確保主任送出前，API 不回傳任何 AI 答案；如果權限無法隔離，才重新評估拆表。此頁是規劃，不是可填答的正式盲測系統；公司 ME Dashboard 的前端、Oracle 表與 API 尚未在此建立。兩項驗收狀態取自既有紀錄，其餘不計入下方待辦統計。</p>
     </section>`;
   }
+  // GPT A 已確認的討論結論與待辦由正式事件投影，不必加入功能結案母體。
+  const gptaNextSteps=p=>(p?.next_steps||[])
+    .filter(i=>i.from_gpta_discussion&&!['verified','supported','superseded'].includes(i.status))
+    .sort((a,b)=>(b.source_date||'').localeCompare(a.source_date||'')||a.title.localeCompare(b.title,'zh-Hant'));
+  const gptaNextLabel=i=>i.decision_status||statusMeta(i.status).label;
+  const gptaNextAction=s=>s==='inspect backend event source and verify actual DaVinci call flags'
+    ?'確認後端事件來源及 DaVinci 實際呼叫標記':s;
+  function gptaNextSection(p){
+    const items=gptaNextSteps(p);
+    if(!items.length)return '';
+    const rows=items.map(i=>`<article class="next-item gpta-next-item"><div>`+
+      `<span class="pill amber">${esc(gptaNextLabel(i))}</span><h3>${esc(i.title)}</h3>`+
+      (i.decision?`<p><b>決策：</b>${esc(i.decision)}</p>`:'')+
+      (i.goal?`<p><b>目標：</b>${esc(i.goal)}</p>`:'')+
+      (i.adjustment?`<p><b>調整方向：</b>${esc(i.adjustment)}</p>`:'')+
+      (i.summary?`<p><b>討論重點：</b>${esc(i.summary)}</p>`:'')+
+      (i.next_step?`<p><b>下一步：</b>${esc(gptaNextAction(i.next_step))}</p>`:'')+
+      (i.source_date?`<small>${esc(i.source_date)}</small>`:'')+
+      `</div></article>`).join('');
+    return `<section class="next-stage gpta-next-stage"><h2>GPT A 討論後的下一步 <small>${items.length} 項</small></h2>`+
+      `<div class="next-list">${rows}</div></section>`;
+  }
   function nextStepsView(p){
     const all=p?.closure?.items||[];
     const active=all.filter(i=>nextStages.some(s=>s.status===i.development_status));
@@ -1106,7 +1162,10 @@
     $('#progress-note').textContent=query()?`符合搜尋：${results.length} 項`:'';
     const roadmap=$('#agent').value==='action'?mvpRoadmap(p):'';
     const planning=roadmap?`<details class="mvp-roadmap-fold"><summary>後續規劃 <small>三階段盲測、工程項目與資料保存說明</small></summary>${roadmap}</details>`:'';
-    $('#progress-content').innerHTML=`<div class="next-head"><h2>待處理事項 · ${active.length} 項</h2><div class="next-counts">${counts}</div></div><p class="next-caveat">以下依目前驗收狀態分組，不是 AI 推測的開發順序。資料沒有明確記載阻塞依賴，不自行認定哪個功能卡住其他功能。</p>${sections||'<div class="logic-empty"><h2>沒有待處理項目</h2><p>可清除搜尋或切換其他 Agent 範圍。</p></div>'}${planning}`;
+    const discussed=gptaNextSteps(p).length;
+    $('#progress-content').innerHTML=`<div class="next-head"><h2>待處理事項 · ${active.length+discussed} 項</h2><div class="next-counts">${counts}${discussed?`<span>GPT A 待辦 <b>${discussed}</b></span>`:''}</div></div>`+
+      gptaNextSection(p)+`<p class="next-caveat">以下功能驗收項目依目前狀態分組；GPT A 討論待辦獨立列出，不計入功能結案統計。</p>`+
+      (sections||(!discussed?'<div class="logic-empty"><h2>沒有待處理項目</h2></div>':''))+planning;
   }
   function closureDetail(id,button){
     const i=closureData()?.items.find(i=>i.item_id===id);if(!i)return;
@@ -1162,13 +1221,12 @@
 
   // 分開顯示來源快照與人工驗收；沒有跨系統同步證據時一律不宣稱最新。
   function renderProgressFreshness(){
-    const snapshot=data?.provenance_manifest?.snapshot_captured_at;
+    const f=data?.freshness||{};
     const parseDate=value=>{const d=new Date(value||'');return Number.isFinite(d.getTime())?d:null;};
-    const snapshotDate=parseDate(snapshot);
-    const shortTime=snapshotDate?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit'}).format(snapshotDate):'日期未知';
     const fullTime=d=>d?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d):'尚未取得';
-    $('#progress-freshness-label').textContent=`資料快照 ${shortTime} · 同步待確認`;
-    $('#progress-snapshot-time').textContent=fullTime(snapshotDate);
+    $('#progress-freshness-label').textContent=`最新收錄 ${fullTime(parseDate(f.events_updated_at))} · ${f.pending_source_count||0} 筆待整理`;
+    $('#progress-snapshot-time').textContent=fullTime(parseDate(data?.provenance_manifest?.snapshot_captured_at));
+    $('#progress-sync-status').textContent=`知識整理 ${fullTime(parseDate(f.knowledge_updated_at))}；進度核對 ${fullTime(parseDate(f.progress_updated_at))}。`;
     const history=(data?.progress?.closure?.items||[]).flatMap(i=>i.history||[]);
     const reviewTimes=history.filter(h=>['accept','reject','defer','reopen'].includes(h.action)).map(h=>parseDate(h.at)).filter(Boolean);
     $('#progress-review-time').textContent=reviewTimes.length?fullTime(new Date(Math.max(...reviewTimes.map(d=>d.getTime())))):'尚無人工決定紀錄';
@@ -1224,7 +1282,8 @@
   // ---- Evolution 演進視角：依對話與知識版本重建的設計演進史，非系統執行日誌。 ----
   let evoView='timeline',evoIndex=0,evoAll=false,evoChangesOnly=false;
   const evoData=()=>data?.evolution||null;
-  const evoPrecisionLabel={timestamp:'時間已確認',day:'僅知日期',free_text:'年份未確認',unknown:'時間未知'};
+  const evoPrecisionLabel={timestamp:'時間已確認',day:'僅知日期',free_text:'年份未確認',unknown:'時間未知',recorded_only:''};
+  const recordedTime=v=>{if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);};
   const evoChangeTone={added:'green',updated:'blue',status_changed:'amber',superseded:'purple'};
   const evoShiftTone={superseded:'purple',status_shift:'amber',iterative_refinement:'blue'};
   // 開發日誌只重排、白話化現有來源文字；不可用演進紀錄推斷功能已驗收。
@@ -1305,10 +1364,12 @@
     const notable=items.slice(0,3);
     const summaries=notable.map(c=>`<li><b>${esc(journalTitle(c.title))}</b><span>${esc(journalDescription(c))}</span>${journalStatus[c.status]?`<em>${esc(journalStatus[c.status])}</em>`:''}</li>`).join('');
     const more=items.length>3?`<details class="journal-more"><summary>其餘 ${items.length-3} 項紀錄</summary><ul>${items.slice(3).map(c=>`<li><button type="button" data-jump="${esc(c.entity_id)}">${esc(journalText(c.title))} ↗</button><span>${esc(journalShort(c.description,95))}</span></li>`).join('')}</ul></details>`:'';
-    const sourceDetails=items.length?`<details class="journal-source" data-journal-source="${esc(b.batch_id)}"><summary>查看來源與完整修改內容</summary><div class="journal-source-target"></div></details>`:'';
-    const description=items.length?`<ul class="journal-key-points">${summaries}</ul>${more}`:
+    const sourceEvents=b.events||[];
+    const sourceDetails=(items.length||sourceEvents.length)?`<details class="journal-source" data-journal-source="${esc(b.batch_id)}"><summary>查看來源與完整修改內容</summary><div class="journal-source-target"></div></details>`:'';
+    const description=items.length?`<ul class="journal-key-points">${summaries}</ul>${more}`:sourceEvents.length?
+      `<ul class="journal-key-points">${sourceEvents.slice(0,3).map(e=>`<li><b>${esc(journalTitle(e.title))}</b><span>${esc(journalShort(e.summary,180))}</span><em>${esc(e.source_status||'來源狀態未知')}${e.recorded_at?' · '+recordedTime(e.recorded_at):''}</em></li>`).join('')}</ul>`:
       `<p class="journal-no-detail">這天有開發紀錄，但目前的公開資料沒有足夠內容說明具體改動。</p>`;
-    return `<article class="journal-day" data-journal-date="${esc(b.batch_id)}"><details ${latest?'open':''}><summary><span class="journal-date">${esc(b.date_label)}</span><span class="journal-heading">${esc(title)}</span><span class="journal-count">${items.length?'有更新':'有紀錄'}</span><span class="journal-fold">查看</span></summary><div class="journal-day-body">${description}${sourceDetails}</div></details></article>`;
+    return `<article class="journal-day" data-journal-date="${esc(b.batch_id)}"><details ${latest?'open':''}><summary><span class="journal-date">${b.time_precision==='recorded_only'?'收錄 ':''}${esc(b.date_label)}</span><span class="journal-heading">${esc(title)}</span><span class="journal-count">${items.length||sourceEvents.length?'有更新':'有紀錄'}</span><span class="journal-fold">查看</span></summary><div class="journal-day-body">${description}${sourceDetails}</div></details></article>`;
   }
 
   function setAsOf(val){
@@ -1339,7 +1400,7 @@
     return `<div class="evo-metrics">${cells.map(([t,n,sub,c])=>`<div class="evo-metric"><span>${esc(t)}</span><strong class="${c}">${esc(n)}</strong><small>${esc(sub)}</small></div>`).join('')}</div>`;
   }
   function filteredEvoBatches(evo){
-    return (evo?.timeline_batches||[]).filter(b=>!evoChangesOnly||(b.entity_changes||[]).length>0);
+    return (evo?.timeline_batches||[]).filter(b=>!evoChangesOnly||(b.entity_changes||[]).length>0||(b.events||[]).length);
   }
   function filteredEvoShifts(evo){
     return evo?.decision_shifts||[];
@@ -1351,13 +1412,17 @@
     const groups=(b.affected_groups||[]).map(g=>`<span class="pill gray">${esc(g.title)} ×${g.count}</span>`).join('');
     const changes=b.entity_changes||[];
     const evs=b.events||[];
+    // 近期 GPT B 增量入庫事件沿用既有「內容更新」卡片，不捏造知識版本或修改次數。
+    const addedRecords=evs.filter(e=>String(e.event_id||'').startsWith('gptb-'));
+    const remainingEvents=evs.filter(e=>!addedRecords.includes(e));
     const snaps=[...(b.snapshots||[]),...(b.assessments||[])];
     return `<article class="logic-card evo-batch-card" data-batch-card="${esc(b.batch_id)}">`+
-      `<div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">第 ${b.ordinal} 批 · ${esc(b.date_label)}</span><span class="pill ${b.is_exact_time?'green':'amber'}">${esc(evoPrecisionLabel[b.time_precision]||b.time_precision)}</span><span class="pill blue">${esc(b.summary)}</span></div><h2>${hl(b.title)}</h2></div>`+
+      `<div class="logic-card-heading"><div class="logic-card-meta"><span class="eyebrow">第 ${b.ordinal} 批 · ${esc(b.date_label)}</span>${evoPrecisionLabel[b.time_precision]?`<span class="pill ${b.is_exact_time?'green':'amber'}">${esc(evoPrecisionLabel[b.time_precision])}</span>`:''}${b.time_precision==='recorded_only'?'':`<span class="pill blue">${esc(b.summary)}</span>`}</div><h2>${hl(b.title)}</h2></div>`+
       (groups?`<div class="evo-groups-row"><span class="logic-links-label">影響概念群：</span>${groups}</div>`:'')+
       (changes.length?`<section class="evo-section"><h3>內容更新（${changes.length} 筆）</h3><div class="evo-change-grid">${changes.map(c=>`<div class="evo-change-item"><div class="evo-change-top"><span class="pill ${evoChangeTone[c.change_type]||'gray'}">${esc(c.change_label)}</span><span class="pill gray">${esc(c.group_title)}</span><span class="pill amber">${esc(c.status)}</span></div><h4><button type="button" class="logic-chip" data-jump="${esc(c.entity_id)}">↗ ${hl(c.title)}</button></h4><p class="evo-change-desc">${hl(c.description)}</p><p class="io-basis">修訂原因：${c.change_reason_basis==='source'?hl(c.change_reason):'<span class="logic-unknown">尚無紀錄</span>'} · 生效 ${esc(c.effective_at)} · 收錄 #${c.sequence} (${esc(c.recorded_at)})</p></div>`).join('')}</div></section>`:'')+
+      (addedRecords.length?`<section class="evo-section"><h3>內容更新（${addedRecords.length} 筆）</h3><div class="evo-change-grid">${addedRecords.map(e=>`<div class="evo-change-item"><div class="evo-change-top"><span class="pill blue">來源查核</span><span class="pill amber">${esc(e.source_status||'來源狀態未記載')}</span></div><h4><button type="button" class="logic-chip source-chip" data-evolution-source="${esc(e.source_record)}">↗ ${hl(e.title)}</button></h4><p class="evo-change-desc">${hl(e.summary)}</p><p class="io-basis">${e.recorded_at?esc(recordedTime(e.recorded_at)):''}</p></div>`).join('')}</div></section>`:'')+
       (snaps.length?`<section class="evo-section"><h3>架構紀錄（${snaps.length} 筆）</h3><div class="evo-chip-wrap">${snaps.map(s=>`<button type="button" class="logic-chip source-chip" data-evolution-source="${esc(s.source_record)}">📸 ${hl(s.title)}<small>${esc(s.captured_at)}</small></button>${s.captured_at&&s.captured_at!=='unknown'?`<button type="button" class="logic-chip" data-evo-asof="${esc(s.captured_at)}">⏳ 預覽此時間切面</button>`:''}`).join('')}</div></section>`:'')+
-      (evs.length?`<details class="logic-context-accordion evo-events-acc" ${!changes.length?'open':''}><summary>📂 相關紀錄（${evs.length} 筆對話／歷史事件 — 點擊展開或點選晶片檢視來源）</summary><div class="evo-event-list">${evs.map(e=>`<div class="evo-event-row"><button type="button" class="logic-chip source-chip" data-evolution-source="${esc(e.source_record)}">📄 ${esc(e.display_date)} · ${esc(e.evidence_type)}<small>${hl(e.title)}</small></button><p>${hl(e.summary)}</p></div>`).join('')}</div></details>`:'')+
+      (remainingEvents.length?`<details class="logic-context-accordion evo-events-acc" ${!changes.length?'open':''}><summary>📂 相關紀錄（${remainingEvents.length} 筆對話／歷史事件 — 點擊展開或點選晶片檢視來源）</summary><div class="evo-event-list">${remainingEvents.map(e=>`<div class="evo-event-row"><button type="button" class="logic-chip source-chip" data-evolution-source="${esc(e.source_record)}">📄 ${esc(e.display_date!=='unknown'?e.display_date:(e.recorded_at?'收錄 '+recordedTime(e.recorded_at):'來源時間待查'))} · ${esc(e.evidence_type)}<small>${hl(e.title)}</small></button><p>${hl(e.summary)}</p></div>`).join('')}</div></details>`:'')+
       `</article>`;
   }
   function evoShiftCard(s){
@@ -1457,7 +1522,7 @@
     if(isTimeline){
       const recent=[...batches].reverse();
       $('#evo-search-note').textContent=query()?`找到 ${recent.length} 天紀錄`:'';
-      $('#evolution-content').innerHTML=`<div class="journal-intro"><h2>開發日誌</h2><p>最近的紀錄在最上面。點日期看當天做過什麼；完成與否請以「進度」頁為準。</p><small>共 ${recent.length} 天有紀錄</small></div>`+(recent.length?recent.map((b,i)=>journalEntry(b,i)).join(''):'<div class="logic-empty"><h2>沒有符合的開發紀錄</h2><p>請調整搜尋或切換專案範圍。</p></div>');
+      $('#evolution-content').innerHTML=`<div class="journal-intro"><h2>開發日誌</h2><p>最近的紀錄在最上面。點日期看當天做過什麼；完成與否請以「進度」頁為準。</p><small>共 ${recent.length} 組紀錄</small></div>`+(recent.length?recent.map((b,i)=>journalEntry(b,i)).join(''):'<div class="logic-empty"><h2>沒有符合的開發紀錄</h2><p>請調整搜尋或切換專案範圍。</p></div>');
     }else if(evoView==='shifts'){
       $('#evo-search-note').textContent=query()?`搜尋「${$('#search').value.trim()}」：${shifts.length} 項轉折符合`:'';
       $('#evolution-content').innerHTML=evoMetricsStrip(evo)+`<section class="evo-list-sec"><div class="evo-sec-head"><h2>設計改了什麼（共 ${shifts.length} 項）</h2><p class="io-basis">對照早期與目前的設計。</p></div>${shifts.length?shifts.map(evoShiftCard).join(''):'<div class="logic-empty"><h2>沒有符合條件的設計轉折項目</h2></div>'}</section>`;
@@ -1505,12 +1570,13 @@
     if(batches.length&&next>=0&&next<batches.length){ev.preventDefault();moveEvoBatch(next);}
   });
   function view(name){
-    if(['architecture','logic','thinking','evolution','progress'].includes(name)){
+    if(['architecture','logic','thinking','cases','evolution','progress'].includes(name)){
       const url=new URL(location.href);
       url.hash='#'+name;
       history.replaceState(null,'',url);
     }
     if(name!=='thinking')$('#thinking-frame').contentWindow?.postMessage({type:'thinking-pause'},location.origin);
+    if(name!=='cases')$('#case-thinking-frame').contentWindow?.postMessage({type:'thinking-pause'},location.origin);
     viewName=name;const ws=document.querySelector('.workspace');ws.dataset.view=name;document.body.dataset.view=name;
     const compact=true;
     document.body.classList.toggle('is-compact-header',compact);
@@ -1519,9 +1585,11 @@
     const activeViews=['architecture','logic','evolution','progress'];
     $('#architecture').hidden=!activeViews.includes(name);$('.graph-panel').hidden=name!=='architecture';$('#logic-panel').hidden=name!=='logic';$('#evolution-panel').hidden=name!=='evolution';$('#progress-panel').hidden=name!=='progress';
     $('#thinking-panel').hidden=name!=='thinking';
+    $('#cases-panel').hidden=name!=='cases';
     $('#home-progress-shortcut').hidden=name!=='architecture';
-    $('#placeholder').hidden=activeViews.includes(name)||name==='thinking';close();
+    $('#placeholder').hidden=activeViews.includes(name)||name==='thinking'||name==='cases';close();
     if(name==='thinking')syncThinking();
+    if(name==='cases')syncCaseThinking();
     $('#thumb-bar').hidden=!mobile()||name!=='logic';$('#step-picker').hidden=true;$('#thumb-position').setAttribute('aria-expanded','false');
     if(name==='logic'){if(data)renderLogic();$('#thumb-bar').hidden=true;return;}
     if(name==='evolution'){if(data)renderEvolution();return;}
@@ -1566,6 +1634,7 @@
     history.replaceState(null,'',url);
     if(shouldLoad)load();
     if(viewName==='thinking')syncThinking();
+    if(viewName==='cases')syncCaseThinking();
   }
   document.addEventListener('click',ev=>{
     const agentBtn=ev.target.closest('[data-agent-scope]');
@@ -1629,6 +1698,13 @@
     frame.dataset.agent=agent;
     frame.srcdoc=JSON.parse(bundle.textContent).replace('<html lang=',`<html data-embedded="true" data-agent="${agent}" lang=`);
   }
+  function syncCaseThinking(){
+    const frame=$('#case-thinking-frame'),agent=$('#agent').value==='history'?'history':'action';
+    if(frame.dataset.agent===agent)return;
+    const bundle=$('#case-thinking-bundle');if(!bundle)return;
+    frame.dataset.agent=agent;
+    frame.srcdoc=JSON.parse(bundle.textContent).replace('<html lang=',`<html data-embedded="true" data-agent="${agent}" lang=`);
+  }
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin||event.source!==$('#thinking-frame').contentWindow||event.data?.type!=='thinking-scope'||!['history','action'].includes(event.data.agent))return;
     setAgent(event.data.agent);
@@ -1647,5 +1723,5 @@
   syncMobileLayout();
   load();
   const initialView=location.hash.slice(1);
-  view(['architecture','logic','thinking','evolution','progress'].includes(initialView)?initialView:'architecture');
+  view(['architecture','logic','thinking','cases','evolution','progress'].includes(initialView)?initialView:'architecture');
 })();
