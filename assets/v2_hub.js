@@ -1129,13 +1129,21 @@
     .filter(i=>i.from_gpta_discussion&&!['verified','supported','superseded'].includes(i.status))
     .sort((a,b)=>(b.source_date||'').localeCompare(a.source_date||'')||a.title.localeCompare(b.title,'zh-Hant'));
   const gptaNextLabel=i=>i.decision_status||statusMeta(i.status).label;
+  // Same read-only work resolution as the Development History timeline.
+  // This is separate from the feature acceptance board's eight items.
+  const sharedWorkClosure=key=>key&&data?.progress?.work_items?.[key]||null;
+  const sharedWorkClosurePill=work=>{
+    if(!work)return '';
+    const tone=work.closure_status==='closed'?'green':work.closure_status==='open'?'amber':'gray';
+    return `<span class="pill ${tone}" title="以此工作最新已知來源判定；非單一步驟驗收">目前：${esc(work.closure_label)}</span>`;
+  };
   const gptaNextAction=s=>s==='inspect backend event source and verify actual DaVinci call flags'
     ?'確認後端事件來源及 DaVinci 實際呼叫標記':s;
   function gptaNextSection(p){
     const items=gptaNextSteps(p);
     if(!items.length)return '';
     const rows=items.map(i=>`<article class="next-item gpta-next-item"><div>`+
-      `<span class="pill amber">${esc(gptaNextLabel(i))}</span><h3>${esc(i.title)}</h3>`+
+      `<span class="pill amber">${esc(gptaNextLabel(i))}</span>${sharedWorkClosurePill(sharedWorkClosure(i.work_item_key))}<h3>${esc(i.title)}</h3>`+
       (i.decision?`<p><b>決策：</b>${esc(i.decision)}</p>`:'')+
       (i.goal?`<p><b>目標：</b>${esc(i.goal)}</p>`:'')+
       (i.adjustment?`<p><b>調整方向：</b>${esc(i.adjustment)}</p>`:'')+
@@ -1360,6 +1368,12 @@
   function journalEntry(b,idx){
     const items=journalChanges(b);
     const title=journalTitle(b.lead_title||b.title||'開發紀錄');
+    // The batch can mix unrelated events. Only badge its actual lead event;
+    // detailed lines are badged one by one, never by the batch's date.
+    // Public snapshots redact individual event titles but keep their order.
+    // lead_title was selected from the first sorted event before redaction.
+    const leadEvent=items.length?null:(b.events||[])[0]||null;
+    const journalClosure=e=>e?.work_item_key?sharedWorkClosurePill(sharedWorkClosure(e.work_item_key)):'';
     const latest=idx===0;
     const notable=items.slice(0,3);
     const summaries=notable.map(c=>`<li><b>${esc(journalTitle(c.title))}</b><span>${esc(journalDescription(c))}</span>${journalStatus[c.status]?`<em>${esc(journalStatus[c.status])}</em>`:''}</li>`).join('');
@@ -1367,9 +1381,9 @@
     const sourceEvents=b.events||[];
     const sourceDetails=(items.length||sourceEvents.length)?`<details class="journal-source" data-journal-source="${esc(b.batch_id)}"><summary>查看來源與完整修改內容</summary><div class="journal-source-target"></div></details>`:'';
     const description=items.length?`<ul class="journal-key-points">${summaries}</ul>${more}`:sourceEvents.length?
-      `<ul class="journal-key-points">${sourceEvents.slice(0,3).map(e=>`<li><b>${esc(journalTitle(e.title))}</b><span>${esc(journalShort(e.summary,180))}</span><em>${esc(e.source_status||'來源狀態未知')}${e.recorded_at?' · '+recordedTime(e.recorded_at):''}</em></li>`).join('')}</ul>`:
+      `<ul class="journal-key-points">${sourceEvents.slice(0,3).map(e=>`<li><b>${esc(journalTitle(e.title))}</b><span>${esc(journalShort(e.summary,180))}</span><div class="journal-work-meta"><em>當時：${esc(e.source_status||'來源狀態未知')}${e.recorded_at?' · '+recordedTime(e.recorded_at):''}</em>${journalClosure(e)}</div></li>`).join('')}</ul>`:
       `<p class="journal-no-detail">這天有開發紀錄，但目前的公開資料沒有足夠內容說明具體改動。</p>`;
-    return `<article class="journal-day" data-journal-date="${esc(b.batch_id)}"><details ${latest?'open':''}><summary><span class="journal-date">${b.time_precision==='recorded_only'?'收錄 ':''}${esc(b.date_label)}</span><span class="journal-heading">${esc(title)}</span><span class="journal-count">${items.length||sourceEvents.length?'有更新':'有紀錄'}</span><span class="journal-fold">查看</span></summary><div class="journal-day-body">${description}${sourceDetails}</div></details></article>`;
+    return `<article class="journal-day" data-journal-date="${esc(b.batch_id)}"><details ${latest?'open':''}><summary><span class="journal-date">${b.time_precision==='recorded_only'?'收錄 ':''}${esc(b.date_label)}</span><span class="journal-heading">${esc(title)}${leadEvent?` <span class="journal-work-status">${journalClosure(leadEvent)}</span>`:''}</span><span class="journal-count">${items.length||sourceEvents.length?'有更新':'有紀錄'}</span><span class="journal-fold">查看</span></summary><div class="journal-day-body">${description}${sourceDetails}</div></details></article>`;
   }
 
   function setAsOf(val){

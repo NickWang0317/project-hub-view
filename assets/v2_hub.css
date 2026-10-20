@@ -726,6 +726,8 @@ body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:
 .journal-day>details[open]>summary{border-bottom:1px solid var(--line);background:var(--panel)}
 .journal-date{font-weight:700;font-size:18px;color:var(--green);white-space:nowrap}
 .journal-heading{font-size:18px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.journal-work-status{display:inline-flex;vertical-align:middle;margin-left:6px;font-size:12px;font-weight:500}
+.journal-work-status .pill{font-size:12px;white-space:nowrap}
 .journal-count{font-size:12px;color:var(--muted);white-space:nowrap}
 .journal-fold{color:var(--green);font-size:13px;white-space:nowrap}
 .journal-day>details[open]>summary .journal-fold{display:none}
@@ -736,6 +738,8 @@ body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:
 .journal-key-points b{font-size:16px;line-height:1.5}
 .journal-key-points span,.journal-more li span{font-size:15px;line-height:1.6;color:var(--ink);overflow-wrap:anywhere}
 .journal-key-points em{font-style:normal;color:var(--amber);font-size:12px;white-space:nowrap}
+.journal-work-meta{display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0}
+.journal-work-meta em{white-space:normal;overflow-wrap:anywhere}
 .journal-more,.journal-source{border-top:1px solid var(--line);padding:12px 0 0!important;margin-top:10px}
 .journal-more>summary,.journal-source>summary{cursor:pointer;color:var(--green);font-size:14px;min-height:42px;display:flex;align-items:center;list-style:none}
 .journal-more ul{margin-top:12px}.journal-more li button{text-align:left;font-size:14px}
@@ -749,6 +753,7 @@ body[data-view="logic"] #thumb-bar,body[data-view="logic"] #step-picker{display:
  .journal-intro{margin-bottom:12px}.journal-intro h2{font-size:23px}
  .journal-day>details>summary{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:14px}
  .journal-date{font-size:15px}.journal-heading{grid-column:1/-1;grid-row:2;font-size:18px}
+ .journal-work-status{margin-left:4px}
  .journal-count{grid-column:2;grid-row:1;font-size:12px}
  .journal-fold{display:none}
  .journal-day-body{padding:14px}
