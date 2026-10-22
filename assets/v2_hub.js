@@ -30,51 +30,12 @@
     action:{
       eyebrow:'MVP ACTION AGENT · 即時異常決策分流架構',
       title:'AI 怎麼協助現場處理即時異常？',
-      caption:'從設備即時資料找出異常、分流「需處理」與「不需處理」，在 Dashboard 呈現建議並由現場人員最終確認。',
-      steps:[
-        'A("取得設備即時資料")',
-        'B("找出需要注意的異常")',
-        'C("判斷是否需要處理")',
-        'D("提出下一步建議")',
-        'E("說明不需處理原因")',
-        'F("在 Dashboard 顯示結果")',
-        'G("由現場人員確認")',
-        'A --> B --> C',
-        'C -->|"需要處理"| D',
-        'C -->|"不需要處理"| E',
-        'D --> F',
-        'E --> F',
-        'F --> G',
-        'class A,B,C,D,E,F step',
-        'class G result'
-      ]
+      caption:'從設備即時資料找出異常、分流「需處理」與「不需處理」，在 Dashboard 呈現建議並由現場人員最終確認。'
     },
     history:{
       eyebrow:'HISTORICAL INVESTIGATION AGENT · 多輪調查與證據驗證架構',
       title:'AI 怎麼深入追查重複發生的異常？',
-      caption:'發現問題後規劃調查方向，透過「調查迴圈」反覆查閱歷史紀錄、比對並驗證證據，最後整理交班摘要與下一步建議。',
-      steps:[
-        'A("發現重複異常")',
-        'B("決定調查方向")',
-        'C("查歷史維修紀錄")',
-        'D("整理調查證據")',
-        'E("判斷是否查得足夠")',
-        'F("驗證分析結論")',
-        'G("說明資料限制")',
-        'H("整理分析與交班摘要")',
-        'I("提出下一步建議")',
-        'A --> B --> C --> D --> E',
-        'E -->|"目前資料還不夠，值得再查"| B',
-        'E -->|"資料足夠，進入驗證"| F',
-        'F -->|"還不能下結論，要補資料"| B',
-        'F -->|"資料互相矛盾，重檢假設"| B',
-        'E -->|"已達調查限制"| G',
-        'F -->|"結論有證據支持"| H',
-        'G --> H',
-        'H --> I',
-        'class A,B,C,D,E,F,G,H step',
-        'class I result'
-      ]
+      caption:'發現問題後規劃調查方向，透過「調查迴圈」反覆查閱歷史紀錄、比對並驗證證據，最後整理交班摘要與下一步建議。'
     }
   };
   const architectureLayout={
@@ -230,7 +191,7 @@
       ]
     }
   };
-  function architectureShowcase(scope,source,isMobile=false){
+  function architectureShowcase(scope,isMobile=false){
     const spec=(isMobile?architectureMobileLayout:architectureLayout)[scope];
     const [W,H]=spec.size;
     const svgEsc=s=>esc(s);
@@ -355,7 +316,7 @@
       zonesHtml+loopCourtHtml+calloutsHtml+pathsHtml+nodesHtml+
     `</svg>`;
   }
-  let graphRenderToken=0,graphSize=null,mermaidReady=false;
+  let graphSize=null;
   function fit(){
     if(viewName!=='architecture'||!graphSize)return;
     const canvas=$('#canvas'),graph=$('#graph'),svg=graph.querySelector('svg');
@@ -375,10 +336,8 @@
     graph.style.height=Math.round(h*scale)+'px';
     svg.style.width='100%';svg.style.height='100%';svg.style.maxWidth='none';
   }
-  function highlight(){} // 其餘頁面沿用詳情狀態；展示圖不做節點高亮。
-  async function renderGraph(){
+  function renderGraph(){
     if(!data)return;
-    const token=++graphRenderToken;
     const scope=$('#agent').value==='history'?'history':'action';
     const scene=architectureScenes[scope];
     const eyebrowEl=document.querySelector('.arch-eyebrow');
@@ -386,35 +345,10 @@
     $('#graph-heading').textContent=scene.title;
     $('#count').textContent=scene.caption;
     const isMob=mobile();
-    const source=[
-      isMob?'flowchart TB':'flowchart LR',
-      ...scene.steps,
-      'classDef step fill:#0e2a49,stroke:#284b6a,color:#bddcf5,stroke-width:1.4px',
-      'classDef result fill:#09263e,stroke:#437498,color:#c8e8ff,stroke-width:1.6px',
-      'linkStyle default stroke:#8799a7,stroke-width:1.3px'
-    ].join('\n');
-    $('#graph').innerHTML=architectureShowcase(scope,source,isMob);
+    $('#graph').innerHTML=architectureShowcase(scope,isMob);
     const box=$('#graph svg')?.viewBox?.baseVal;
     graphSize={width:Math.max(200,box?.width||1400),height:Math.max(180,box?.height||544)};
     if(viewName==='architecture')fit();
-    if(!window.PihMermaid)return;
-    try{
-      if(!mermaidReady){
-        window.PihMermaid.initialize({
-          startOnLoad:false,securityLevel:'strict',theme:'base',
-          themeVariables:{
-            background:'#020507',primaryColor:'#0e2a49',primaryTextColor:'#bddcf5',
-            primaryBorderColor:'#284b6a',lineColor:'#8799a7',
-            fontFamily:'PingFang TC, Noto Sans TC, sans-serif',fontSize:'19px'
-          },
-          flowchart:{htmlLabels:false,curve:'basis',nodeSpacing:64,rankSpacing:38,padding:18}
-        });
-        mermaidReady=true;
-      }
-      await window.PihMermaid.render('pih-simple-architecture-'+token,source);
-    }catch(err){
-      console.error('Mermaid 驗證略過',err);
-    }
   }
   const step=(n,title,body,open=false)=>`<details ${open?'open':''}><summary>${n}. ${title}</summary>${body}</details>`;
   const pair=(k,v)=>`<dt>${esc(k)}</dt><dd>${esc(txt(v))}</dd>`;
@@ -451,15 +385,6 @@
     syncSheetSize();
   }
   function syncSheetSize(){const b=$('#drawer .sheet-resize');if(b){b.textContent=$('#drawer').classList.contains('sheet-full')?'收合半屏':'展開全屏';b.setAttribute('aria-expanded',String($('#drawer').classList.contains('sheet-full')));}}
-  function syncMobileLogic(steps){
-    $('#thumb-bar').hidden=!mobile()||viewName!=='logic';
-    $('#thumb-prev').disabled=!steps.length||logicIndex===0;
-    $('#thumb-next').disabled=!steps.length||logicIndex>=steps.length-1;
-    $('#thumb-detail').disabled=!steps.length;
-    $('#thumb-position').textContent=steps.length?`${logicIndex+1} / ${steps.length}`:'無步驟';
-    $('#step-picker').innerHTML=steps.map((s,i)=>`<button data-logic-step="${i}" ${i===logicIndex?'aria-current="step"':''}>${i+1} · ${esc(s.title)}</button>`).join('');
-    if(mobile()&&viewName==='logic')$('#logic-rail [aria-current]')?.scrollIntoView({inline:'center',block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
-  }
   function openDetail(id, focus=true, autoSync=false){
     selected=id;const e=entity(id),g=data?.groups?.find(g=>'group:'+g.id===id),edge=edges.find(e=>e.id===id)||data?.relationships?.find(e=>e.id===id);let title,body;
     if(e){title=e.title;const h=e.evidence_and_history,s=e.state;
@@ -473,10 +398,10 @@
     }else if(edge){title='模組之間的關係';const raw=edge.members?data.relationships.filter(e=>edge.members.includes(e.id)):[edge];body=step(1,'用途',`<p>${esc(edge.label)}</p><p>${edge.confidence==='documented'?'有來源描述；不是獨立程式驗證。':'推論／規劃或來源不足，尚未確認。'}</p>`,true)+step(2,'方向與相連模組',raw.map(e=>`<button class="jump" data-jump="${esc(e.source)}">來源：${esc(entity(e.source)?.title)}</button><button class="jump" data-jump="${esc(e.target)}">目標：${esc(entity(e.target)?.title)}</button><p>${esc(e.label)}</p>`).join(''),true)+step(3,'完成情況','<p>關係存在於文件不表示執行路徑已驗收。</p>')+step(4,'技術資訊',`<p>${esc(raw.map(e=>e.type).join('、'))}</p>`)+step(5,'參考紀錄',evidence(raw.flatMap(e=>e.events)));}
     else return;
     $('#drawer').innerHTML=`<div class="drawer-head"><button id="close" aria-label="關閉詳情">✕ 關閉</button><div class="eyebrow">功能說明${autoSync?' · 步驟自動連動':''}</div><h2>${esc(title)}</h2></div>${body}`;
-    $('#drawer').classList.add('open');$('#drawer').classList.toggle('auto-synced',Boolean(autoSync));$('#drawer').scrollTop=0;highlight();highlightLogicChips(id);highlightEvolutionChips(id,null);if(focus)$('#close').focus();
+    $('#drawer').classList.add('open');$('#drawer').classList.toggle('auto-synced',Boolean(autoSync));$('#drawer').scrollTop=0;highlightLogicChips(id);highlightEvolutionChips(id,null);if(focus)$('#close').focus();
     enhanceMobileDrawer(e?.id);syncSheet();
   }
-  function close(){selected=null;$('#drawer').classList.remove('open','auto-synced','sheet-full');$('#drawer').innerHTML='<div class="drawer-empty"><span>↗</span><h2>選擇功能</h2><p>查看用途與相關紀錄。</p></div>';syncSheet();highlight();highlightLogicChips();highlightEvolutionChips();if(origin?.isConnected)origin.focus({preventScroll:true});}
+  function close(){selected=null;$('#drawer').classList.remove('open','auto-synced','sheet-full');$('#drawer').innerHTML='<div class="drawer-empty"><span>↗</span><h2>選擇功能</h2><p>查看用途與相關紀錄。</p></div>';syncSheet();highlightLogicChips();highlightEvolutionChips();if(origin?.isConnected)origin.focus({preventScroll:true});}
   let knowledgeSnapshotPromise;
   async function workspaceKnowledge(){
     if(window.__V2_STATIC_BUNDLE__)return {views:Object.fromEntries(Object.entries(window.__V2_STATIC_BUNDLE__.views).map(([scope,v])=>[scope,v.latest]))};
@@ -631,13 +556,6 @@
     const more=materials.length>1?`<details class="story-more"><summary>查看其他流程紀錄</summary><label>選擇來源<select data-story-material>${materials.map(a=>`<option value="${esc(a.id)}" ${a.id===m.id?'selected':''}>${esc(a.title)}</option>`).join('')}</select></label></details>`:'';
     const caseInfo=isCase?`<details class="story-more" data-story-case><summary>查看案例的證據與結論</summary><div class="story-case-body"></div></details>`:'';
     return `<div class="story-page"><div class="story-intro"><h2>${esc(headline)}</h2><p>點選流程節點，查看這一步的說明。${isCase?'案例結論仍需對照證據。':'這是設計流程，不代表全部完成驗收。'}</p></div><div class="flow-workspace"><section class="flow-map" aria-label="互動流程圖"><div class="flow-map-heading"><b>完整流程</b><small>${flow.length} 個步驟 · 依紀錄的閱讀順序</small></div><div class="flow-nodes">${entries||'<p>目前沒有足夠紀錄可以畫出流程。</p>'}</div></section><section id="flow-detail" class="flow-desktop-inspector" aria-label="目前選取的步驟">${active>=0?logicStepDetail(flow[active],flow,active,isCase):'<p>點選流程步驟查看說明。</p>'}</section></div><div class="flow-extras">${gap}${caseInfo}${more}</div></div>`;
-  }
-  function syncLogicDrawer(s,m){
-    if(viewName!=='logic'||!s)return;
-    const jumpId=(s.related_entity_ids||m?.related_entity_ids||[]).find(id=>entity(id));
-    if(jumpId){openDetail(jumpId,false,true);return;}
-    const ref=s.evidence_refs?.[0]||m?.evidence_refs?.[0];
-    if(ref){sourceDrawer(ref,null,false,true);highlightLogicChips(null,s.step_id,0);}
   }
   function filteredSteps(m){return m?.steps||[];}
   function renderLogic(){
